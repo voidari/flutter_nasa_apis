@@ -7,7 +7,7 @@
 [![Issues][issues-shield]][issues-url]
 [![MIT License][license-shield]][license-url]
 
-A wrapper for the NASA Open APIs. Provides an easy dart-specific way of working with the requests available and provides parsed responses, including configurable caching and management of data.
+A wrapper for the NASA Open APIs with caching and helpful utilities for seamless integration. Provides an easy dart-specific way of working with the requests available and provides parsed responses, including configurable caching and management of data.
 
 For information on NASA's APIs, see the documentation on [NASA Open APIs](https://api.nasa.gov/).
 
