@@ -52,7 +52,8 @@ class _MyHomePageState extends State<MyHomePage> {
           print("$name: $msg");
         },
         apodSupport: true,
-        apodCacheExpiration: const Duration(seconds: 20));
+        apodCacheSupport: true,
+        apodDefaultCacheExpiration: const Duration(seconds: 20));
   }
 
   @override
@@ -82,61 +83,98 @@ class _MyHomePageState extends State<MyHomePage> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             TextButton(
-                onPressed: () async {
-                  _apodTestResults.clear();
-                  DateTime date = DateTime.now();
-                  Tuple2<int, ApodItem?> result =
-                      await NasaApod.requestByDate(date);
-                  _apodTestDescription =
-                      "requestByDate()\ndate[${date.toString()}]\nhttp response code: ${result.item1.toString()}";
-                  if (result.item2 != null) {
-                    _apodTestResults.add(result.item2!);
-                  }
-                  setState(() {});
-                },
-                child: const Text("requestByDate")),
+              onPressed: () async {
+                _apodTestResults.clear();
+                DateTime date = DateTime.now();
+                Tuple2<int, ApodItem?> result =
+                    await NasaApod.requestByDate(date);
+                _apodTestDescription =
+                    "requestByDate()\ndate[${date.toString()}]\nhttp response code: ${result.item1.toString()}";
+                if (result.item2 != null) {
+                  _apodTestResults.add(result.item2!);
+                }
+                setState(() {});
+              },
+              child: const Text("requestByDate"),
+            ),
             TextButton(
-                onPressed: () async {
-                  _apodTestResults.clear();
-                  Tuple2<int, List<ApodItem>?> result =
-                      await NasaApod.requestByMonth(1997, 3);
-                  _apodTestDescription =
-                      "requestByRange()\nMarch 1997\nhttp response code: ${result.item1.toString()}";
-                  if (result.item2 != null) {
-                    _apodTestResults = result.item2!;
-                  }
-                  setState(() {});
-                },
-                child: const Text("requestByMonth")),
+              onPressed: () async {
+                _apodTestResults.clear();
+                Tuple2<int, List<ApodItem>?> result =
+                    await NasaApod.requestByMonth(1997, 3);
+                _apodTestDescription =
+                    "requestByRange()\nMarch 1997\nhttp response code: ${result.item1.toString()}";
+                if (result.item2 != null) {
+                  _apodTestResults = result.item2!;
+                }
+                setState(() {});
+              },
+              child: const Text("requestByMonth"),
+            ),
             TextButton(
-                onPressed: () async {
-                  _apodTestResults.clear();
-                  DateTime date = DateTime.now();
-                  Tuple2<int, List<ApodItem>?> result =
-                      await NasaApod.requestByRandom(5);
-                  _apodTestDescription =
-                      "requestByRandom()\ncount[5]\nhttp response code: ${result.item1.toString()}";
-                  if (result.item2 != null) {
-                    _apodTestResults = result.item2!;
-                  }
-                  setState(() {});
-                },
-                child: const Text("requestByRandom")),
+              onPressed: () async {
+                _apodTestResults.clear();
+                DateTime date = DateTime.now();
+                Tuple2<int, List<ApodItem>?> result =
+                    await NasaApod.requestByRandom(5);
+                _apodTestDescription =
+                    "requestByRandom()\ncount[5]\nhttp response code: ${result.item1.toString()}";
+                if (result.item2 != null) {
+                  _apodTestResults = result.item2!;
+                }
+                setState(() {});
+              },
+              child: const Text("requestByRandom"),
+            ),
             TextButton(
-                onPressed: () async {
-                  _apodTestResults.clear();
-                  DateTime startDate = DateTime(2017, 10, 31);
-                  DateTime endDate = DateTime(2017, 11, 4);
-                  Tuple2<int, List<ApodItem>?> result =
-                      await NasaApod.requestByRange(startDate, endDate);
-                  _apodTestDescription =
-                      "requestByRange()\n$startDate - $endDate\nhttp response code: ${result.item1.toString()}";
-                  if (result.item2 != null) {
-                    _apodTestResults = result.item2!;
+              onPressed: () async {
+                _apodTestResults.clear();
+                DateTime startDate = DateTime(2017, 10, 31);
+                DateTime endDate = DateTime(2017, 11, 4);
+                Tuple2<int, List<ApodItem>?> result =
+                    await NasaApod.requestByRange(startDate, endDate);
+                _apodTestDescription =
+                    "requestByRange()\n$startDate - $endDate\nhttp response code: ${result.item1.toString()}";
+                if (result.item2 != null) {
+                  _apodTestResults = result.item2!;
+                }
+                setState(() {});
+              },
+              child: const Text("requestByRange"),
+            ),
+            TextButton(
+              onPressed: () async {
+                _apodTestResults.clear();
+                // Force a caching of the date
+                DateTime date = DateTime(2017, 10, 31);
+                Tuple2<int, ApodItem?> result =
+                    await NasaApod.requestByDate(date);
+                _apodTestDescription =
+                    "getCategory() and updateItemCache()\n$date being used.";
+                if (result.item2 != null) {
+                  ApodItem item = result.item2!;
+                  String category = "favorite";
+                  if (item.categories.contains(category)) {
+                    item.categories.remove(category);
+                    _apodTestDescription +=
+                        "'$category' was removed. Results should be empty.";
+                  } else {
+                    item.categories.add(category);
+                    _apodTestDescription +=
+                        "'$category' was added. Results should show it.";
                   }
-                  setState(() {});
-                },
-                child: const Text("requestByRange")),
+                  // Update the cache with the change
+                  await NasaApod.updateItemCache(apodItem: item);
+                  // Query the category
+                  _apodTestResults =
+                      await NasaApod.getCategory(category: category);
+                }
+                _apodTestDescription +=
+                    "\nhttp response code: ${result.item1.toString()}";
+                setState(() {});
+              },
+              child: const Text("Category 'favorite' Update"),
+            ),
           ],
         ),
       );

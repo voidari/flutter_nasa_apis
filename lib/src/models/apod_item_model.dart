@@ -7,7 +7,6 @@ import 'package:nasa_apis/src/models/base_model.dart';
 /// parsed information.
 class ApodItemModel implements BaseModel {
   // Map constants
-  static const String keyUuid = "uuid";
   static const String keyExpiration = "expiration";
   static const String keyLocalCategories = "local_categories";
   static const String keyCopyright = "copyright";
@@ -30,11 +29,10 @@ class ApodItemModel implements BaseModel {
   @override
   String createTable() {
     String command = "CREATE TABLE $tableName(";
-    command += "$keyUuid TEXT PRIMARY KEY,";
+    command += "$keyDate INTEGER PRIMARY KEY,";
     command += "$keyExpiration INTEGER,";
     command += "$keyLocalCategories TEXT,";
     command += "$keyCopyright TEXT,";
-    command += "$keyDate INTEGER,";
     command += "$keyExplanation TEXT,";
     command += "$keyHdUrl TEXT,";
     command += "$keyMediaType TEXT,";

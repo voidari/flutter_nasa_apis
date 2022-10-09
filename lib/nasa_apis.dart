@@ -19,19 +19,22 @@ class Nasa {
       {final String? apiKey,
       final Function(String, String)? logReceiver,
       bool apodSupport = false,
-      Duration? apodCacheExpiration,
+      bool apodCacheSupport = true,
+      Duration? apodDefaultCacheExpiration = const Duration(days: 90),
       bool isTest = false}) async {
     // Add the log receiver if provided
     if (logReceiver != null) {
       Log.setLogFunction(logReceiver);
     }
     // Initialize the database if anything storage related is supported
-    if (apodSupport && apodCacheExpiration != null) {
+    if (apodSupport && apodCacheSupport) {
       await DatabaseManager.init(isTest: isTest);
     }
     // Initialize the APOD
     if (apodSupport) {
-      NasaApod.init(cacheExpiration: apodCacheExpiration);
+      NasaApod.init(
+          cacheSupport: apodCacheSupport,
+          defaultCacheExpiration: apodDefaultCacheExpiration);
     }
   }
 }

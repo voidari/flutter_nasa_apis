@@ -29,24 +29,29 @@ class NasaApod {
 
   static final DateTime _minimumApiDate = DateTime.utc(1995, 6, 16);
 
-  static Duration? _cacheExpiration;
+  static late bool _cacheSupport;
+  static late Duration? _defaultCacheExpiration;
 
-  static void init({Duration? cacheExpiration}) {
-    _cacheExpiration = cacheExpiration;
+  static void init(
+      {bool cacheSupport = true,
+      Duration? defaultCacheExpiration = const Duration(days: 90)}) {
+    _cacheSupport = cacheSupport;
+    _defaultCacheExpiration = defaultCacheExpiration;
 
-    if (_cacheExpiration != null) {
+    if (_cacheSupport) {
       // Start the loop timer for the specified duration
       Timer.periodic(const Duration(seconds: 5), (timer) {
-        _loop();
+        _deleteExpiredCache();
       });
     }
   }
 
   /// The update loop that checks for expired rows. Removes expired entries.
-  static void _loop() async {
+  static Future<void> _deleteExpiredCache() async {
     int now = DateTime.now().millisecondsSinceEpoch;
     DatabaseManager.getConnection().delete(ApodItemModel.tableName,
-        where: "${ApodItemModel.keyExpiration} < $now");
+        where: "${ApodItemModel.keyExpiration} < $now AND "
+            "${ApodItemModel.keyExpiration} > 0");
   }
 
   /// Retrieves the minimum date allowed for query. This is the first date
@@ -137,7 +142,7 @@ class NasaApod {
     }
 
     // Check cache for the items if caching is allowed
-    if (_cacheExpiration != null) {
+    if (_cacheSupport && _defaultCacheExpiration != null) {
       final List<
           Map<String,
               dynamic>> maps = await DatabaseManager.getConnection().query(
@@ -153,13 +158,14 @@ class NasaApod {
         DateTime now = DateTime.now();
         for (Map<String, dynamic> map in maps) {
           ApodItem item = ApodItem.fromMap(map);
-          item.expiration = now.add(_cacheExpiration!);
+          item.expiration = now.add(_defaultCacheExpiration!);
           items.add(item);
-          await DatabaseManager.getConnection()
-              .update(ApodItemModel.tableName, item.toMap(),
-                  where: "${ApodItemModel.keyUuid} = '${item.uuid}' AND "
-                      "${ApodItemModel.keyLocalCategories} = ''",
-                  conflictAlgorithm: ConflictAlgorithm.replace);
+          await DatabaseManager.getConnection().update(
+              ApodItemModel.tableName, item.toMap(),
+              where:
+                  "${ApodItemModel.keyDate} = ${item.date.millisecondsSinceEpoch}"
+                  " AND ${ApodItemModel.keyLocalCategories} = ''",
+              conflictAlgorithm: ConflictAlgorithm.replace);
         }
         return Tuple2(HttpStatus.ok, items);
       }
@@ -192,8 +198,8 @@ class NasaApod {
       }
 
       // Cache the response if caching is support
-      if (_cacheExpiration != null) {
-        DateTime expiration = DateTime.now().add(_cacheExpiration!);
+      if (_cacheSupport && _defaultCacheExpiration != null) {
+        DateTime expiration = DateTime.now().add(_defaultCacheExpiration!);
         for (ApodItem item in items) {
           item.expiration = expiration;
           await DatabaseManager.getConnection().insert(
@@ -206,6 +212,67 @@ class NasaApod {
     }
 
     return Tuple2(response.statusCode, items);
+  }
+
+  /// Retrieves all APOD items that have the provided [category] or
+  /// [categoryList] associated with them.
+  static Future<List<ApodItem>> getCategory(
+      {final String? category, List<String>? categoryList}) async {
+    // Create the category list where-clause
+    categoryList ??= <String>[];
+    if (category != null && !categoryList.contains(category)) {
+      categoryList.add(category);
+    }
+    String whereClause = "";
+    for (String category in categoryList) {
+      if (whereClause.isNotEmpty) {
+        whereClause += " OR ";
+      }
+      whereClause += "${ApodItemModel.keyLocalCategories} LIKE  '%$category%'";
+    }
+
+    // Retrieve the categories from the database
+    final List<Map<String, dynamic>> maps =
+        await DatabaseManager.getConnection()
+            .query(ApodItemModel.tableName, where: whereClause);
+
+    // Populate the APOD items list
+    List<ApodItem> items = <ApodItem>[];
+    for (Map<String, dynamic> map in maps) {
+      items.add(ApodItem.fromMap(map));
+    }
+    return items;
+  }
+
+  /// Updates the cache with the provided [apodItem] or [apodItemList].
+  /// Use this function to update the list of categories associated with the
+  /// item or items. Set the expiration to null to make the item persistent and
+  /// avoid being deleted.
+  static Future<void> updateItemCache(
+      {final ApodItem? apodItem, List<ApodItem>? apodItemList}) async {
+    if (!_cacheSupport) {
+      Log.out("Caching is not enabled. Enable caching in the init function.",
+          name: _cClass);
+      return;
+    }
+    // Create the list of APOD items for insertion
+    apodItemList = apodItemList ?? <ApodItem>[];
+    if (apodItem != null && !apodItemList.contains(apodItem)) {
+      apodItemList.add(apodItem);
+    }
+
+    // Insert or update the items in the database
+    for (ApodItem item in apodItemList) {
+      await DatabaseManager.getConnection().insert(
+        ApodItemModel.tableName,
+        item.toMap(),
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+    }
+
+    // Delete expired cache if supported so any changes made in the update
+    // will reflect in the next query.
+    await _deleteExpiredCache();
   }
 
   /// Determines if the date provided is valid. The API only supports dates

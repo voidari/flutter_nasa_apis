@@ -1,6 +1,9 @@
 // Copyright (C) 2022 by Voidari LLC or its subsidiaries.
 library nasa_apis;
 
+import 'dart:convert';
+
+import 'package:flutter/foundation.dart';
 import 'package:nasa_apis/src/models/apod_item_model.dart';
 
 /// The possible media types of an APOD.
@@ -9,8 +12,8 @@ enum MediaType { image, video, unknown }
 /// The container for APOD data and helper functions for providing the
 /// parsed information.
 class ApodItem {
-  /// The unique ID of the item, not provided by NASA.
-  String uuid;
+  /// The date that the image or video was posted.
+  final DateTime date;
 
   /// An empty field by default, but can add new type IDs to add searchability
   /// and sorting to the saved items.
@@ -19,9 +22,6 @@ class ApodItem {
   /// The copyright notice for the image or video. If no copyright exists,
   /// the copyright will be empty.
   final String copyright;
-
-  /// The date that the image or video was posted.
-  final DateTime date;
 
   /// An unformatted description of the media item.
   final String explanation;
@@ -44,14 +44,14 @@ class ApodItem {
   /// The standard (or only) URL version of an image or the video URL.
   final String url;
 
-  /// The expiration
+  /// The expiration time of the cache. Set to null to keep the cache persistent
+  /// and avoid deletion. Set to the current time or less to force deletion.
   DateTime? expiration;
 
   /// The constructor of the APOD item.
   ApodItem(
-      this.uuid,
-      this.copyright,
       this.date,
+      this.copyright,
       this.explanation,
       this.hdUrl,
       this.mediaType,
@@ -121,14 +121,8 @@ class ApodItem {
         : "";
     String url =
         map.containsKey(ApodItemModel.keyUrl) ? map[ApodItemModel.keyUrl] : "";
-    String uuid;
-    if (map.containsKey(ApodItemModel.keyUuid)) {
-      uuid = map[ApodItemModel.keyUuid];
-    } else {
-      uuid = date.toString();
-    }
 
-    return ApodItem(uuid, copyright, date, explanation, hdUrl, mediaType,
+    return ApodItem(date, copyright, explanation, hdUrl, mediaType,
         serviceVersion, thumbnailUrl, title, url,
         categories: categories, expiration: expiration);
   }
@@ -136,15 +130,12 @@ class ApodItem {
   /// Creates a map given the current APOD item data.
   Map<String, dynamic> toMap() {
     Map<String, dynamic> map = {};
-    map.putIfAbsent(ApodItemModel.keyUuid, () => uuid);
-    if (expiration != null) {
-      map.putIfAbsent(ApodItemModel.keyExpiration,
-          () => expiration?.millisecondsSinceEpoch);
-    }
+    map.putIfAbsent(ApodItemModel.keyDate, () => date.millisecondsSinceEpoch);
+    map.putIfAbsent(ApodItemModel.keyExpiration,
+        () => expiration != null ? expiration?.millisecondsSinceEpoch : 0);
     map.putIfAbsent(
         ApodItemModel.keyLocalCategories, () => categories.join(','));
     map.putIfAbsent(ApodItemModel.keyCopyright, () => copyright);
-    map.putIfAbsent(ApodItemModel.keyDate, () => date.millisecondsSinceEpoch);
     map.putIfAbsent(ApodItemModel.keyExplanation, () => explanation);
     map.putIfAbsent(ApodItemModel.keyHdUrl, () => hdUrl);
     map.putIfAbsent(
@@ -181,11 +172,40 @@ class ApodItem {
   /// Provides an override for a detailed ApodItem string.
   @override
   String toString() {
-    return "ApodItem(${ApodItemModel.keyUuid}: $uuid, ${ApodItemModel.keyLocalCategories}: [${categories.join(',')}], "
-        "${ApodItemModel.keyCopyright}: $copyright, ${ApodItemModel.keyDate}: ${date.toString()}, "
-        "${ApodItemModel.keyExplanation}: $explanation, ${ApodItemModel.keyHdUrl}: $hdUrl, "
+    return "ApodItem("
+        "${ApodItemModel.keyDate}: ${date.toString()}, "
+        "${ApodItemModel.keyLocalCategories}: [${categories.join(',')}], "
+        "${ApodItemModel.keyCopyright}: $copyright, "
+        "${ApodItemModel.keyExplanation}: $explanation, "
+        "${ApodItemModel.keyHdUrl}: $hdUrl, "
         "${ApodItemModel.keyMediaType}: ${_fromMediaType(mediaType)}, "
-        "${ApodItemModel.keyServiceVersion}: $serviceVersion, ${ApodItemModel.keyThumbnailUrl}: $thumbnailUrl, "
-        "${ApodItemModel.keyTitle}: $title, ${ApodItemModel.keyUrl}: $url)";
+        "${ApodItemModel.keyServiceVersion}: $serviceVersion, "
+        "${ApodItemModel.keyThumbnailUrl}: $thumbnailUrl, "
+        "${ApodItemModel.keyTitle}: $title, "
+        "${ApodItemModel.keyUrl}: $url"
+        ")";
   }
+
+  /// Comparison operator for the item.
+  @override
+  bool operator ==(Object other) {
+    if (other is! ApodItem) {
+      return false;
+    }
+    ApodItem otherItem = other;
+    return date == otherItem.date &&
+        listEquals(categories, otherItem.categories) &&
+        copyright == otherItem.copyright &&
+        explanation == otherItem.explanation &&
+        hdUrl == otherItem.hdUrl &&
+        mediaType == otherItem.mediaType &&
+        serviceVersion == otherItem.serviceVersion &&
+        thumbnailUrl == otherItem.thumbnailUrl &&
+        title == otherItem.title &&
+        url == otherItem.url;
+  }
+
+  /// The hash code override.
+  @override
+  int get hashCode => jsonEncode(toMap()).hashCode;
 }
