@@ -2,6 +2,8 @@
 library nasa_apis;
 
 import 'package:nasa_apis/src/log.dart';
+import 'package:nasa_apis/src/managers/apod.dart';
+import 'package:nasa_apis/src/managers/database_manager.dart';
 
 export 'src/managers/apod.dart';
 export 'src/models/apod_item.dart';
@@ -13,11 +15,23 @@ class Nasa {
   /// Initialize the library with the [apiKey] provided by api.nasa.gov and
   /// a function [logReceiver] to receive log events to your personal logging
   /// tool.
-  static void init(
-      {final String? apiKey, final Function(String, String)? logReceiver}) {
+  static Future<void> init(
+      {final String? apiKey,
+      final Function(String, String)? logReceiver,
+      bool apodSupport = false,
+      Duration? apodCacheExpiration,
+      bool isTest = false}) async {
     // Add the log receiver if provided
     if (logReceiver != null) {
       Log.setLogFunction(logReceiver);
+    }
+    // Initialize the database if anything storage related is supported
+    if (apodSupport && apodCacheExpiration != null) {
+      await DatabaseManager.init(isTest: isTest);
+    }
+    // Initialize the APOD
+    if (apodSupport) {
+      NasaApod.init(cacheExpiration: apodCacheExpiration);
     }
   }
 }

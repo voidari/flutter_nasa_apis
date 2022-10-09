@@ -7,8 +7,8 @@ import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:nasa_apis/src/log.dart';
 
-/// The core manager for handling all requests and tracking the usage of
-/// the demo key/API key combination.
+/// The manager for handling all requests and tracking the usage of the demo
+/// key/API key combination.
 class RequestManager {
   static const String _cClass = "RequestManager";
   static const String _cScheme = "https";

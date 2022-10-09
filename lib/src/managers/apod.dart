@@ -1,13 +1,17 @@
 // Copyright (C) 2022 by Voidari LLC or its subsidiaries.
 library nasa_apis;
 
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
 import 'package:http/http.dart' as http;
 import 'package:nasa_apis/src/log.dart';
+import 'package:nasa_apis/src/managers/database_manager.dart';
 import 'package:nasa_apis/src/managers/request_manager.dart';
 import 'package:nasa_apis/src/models/apod_item.dart';
+import 'package:nasa_apis/src/models/apod_item_model.dart';
+import 'package:sqflite/sqflite.dart';
 import 'package:tuple/tuple.dart';
 
 /// The manager for APOD requests, providing a framework and caching options
@@ -24,6 +28,26 @@ class NasaApod {
   static const String _cParamThumbs = "thumbs";
 
   static final DateTime _minimumApiDate = DateTime.utc(1995, 6, 16);
+
+  static Duration? _cacheExpiration;
+
+  static void init({Duration? cacheExpiration}) {
+    _cacheExpiration = cacheExpiration;
+
+    if (_cacheExpiration != null) {
+      // Start the loop timer for the specified duration
+      Timer.periodic(const Duration(seconds: 5), (timer) {
+        _loop();
+      });
+    }
+  }
+
+  /// The update loop that checks for expired rows. Removes expired entries.
+  static void _loop() async {
+    int now = DateTime.now().millisecondsSinceEpoch;
+    DatabaseManager.getConnection().delete(ApodItemModel.tableName,
+        where: "${ApodItemModel.keyExpiration} < $now");
+  }
 
   /// Retrieves the minimum date allowed for query. This is the first date
   /// an APOD was released.
@@ -99,6 +123,8 @@ class NasaApod {
   /// item list if the request was successful.
   static Future<Tuple2<int, List<ApodItem>?>> requestByRange(
       DateTime startDate, DateTime endDate) async {
+    startDate = DateTime(startDate.year, startDate.month, startDate.day);
+    endDate = DateTime(endDate.year, endDate.month, endDate.day);
     Log.out("requestByRange() startDate: $startDate, endDate: $endDate",
         name: _cClass);
     // Validate the requested dates
@@ -110,7 +136,36 @@ class NasaApod {
       return const Tuple2(600, null);
     }
 
-    // Create the parameters for the requst
+    // Check cache for the items if caching is allowed
+    if (_cacheExpiration != null) {
+      final List<
+          Map<String,
+              dynamic>> maps = await DatabaseManager.getConnection().query(
+          ApodItemModel.tableName,
+          where:
+              "${startDate.millisecondsSinceEpoch} <= ${ApodItemModel.keyDate} "
+              "AND ${ApodItemModel.keyDate} <= ${endDate.millisecondsSinceEpoch}");
+      if (maps.length == _daysInRange(startDate, endDate)) {
+        Log.out(
+            "requestByRange() A cache hit was found. Converting to return.");
+        List<ApodItem> items = <ApodItem>[];
+        // Add the items to the list and reset the cache
+        DateTime now = DateTime.now();
+        for (Map<String, dynamic> map in maps) {
+          ApodItem item = ApodItem.fromMap(map);
+          item.expiration = now.add(_cacheExpiration!);
+          items.add(item);
+          await DatabaseManager.getConnection()
+              .update(ApodItemModel.tableName, item.toMap(),
+                  where: "${ApodItemModel.keyUuid} = '${item.uuid}' AND "
+                      "${ApodItemModel.keyLocalCategories} = ''",
+                  conflictAlgorithm: ConflictAlgorithm.replace);
+        }
+        return Tuple2(HttpStatus.ok, items);
+      }
+    }
+
+    // Create the parameters for the request
     Map<String, String> params = <String, String>{};
     if (startDate.isAtSameMomentAs(endDate)) {
       params.putIfAbsent(_cParamDate, () => _toRequestDateFormat(startDate));
@@ -135,6 +190,19 @@ class NasaApod {
           items.add(ApodItem.fromMap(jsonItem));
         }
       }
+
+      // Cache the response if caching is support
+      if (_cacheExpiration != null) {
+        DateTime expiration = DateTime.now().add(_cacheExpiration!);
+        for (ApodItem item in items) {
+          item.expiration = expiration;
+          await DatabaseManager.getConnection().insert(
+            ApodItemModel.tableName,
+            item.toMap(),
+            conflictAlgorithm: ConflictAlgorithm.ignore,
+          );
+        }
+      }
     }
 
     return Tuple2(response.statusCode, items);
@@ -154,5 +222,12 @@ class NasaApod {
   /// Converts a DateTime to the expected NASA request format.
   static String _toRequestDateFormat(DateTime dateTime) {
     return "${dateTime.year.toString()}-${dateTime.month.toString()}-${dateTime.day.toString()}";
+  }
+
+  /// Utility function used to count the number of days between two dates.
+  static int _daysInRange(DateTime start, DateTime end) {
+    start = DateTime(start.year, start.month, start.day);
+    end = DateTime(end.year, end.month, end.day);
+    return end.difference(start).inHours ~/ 24 + 1;
   }
 }
