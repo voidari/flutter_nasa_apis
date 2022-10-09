@@ -45,7 +45,8 @@ class ApodItem {
   final String url;
 
   /// The expiration time of the cache. Set to null to keep the cache persistent
-  /// and avoid deletion. Set to the current time or less to force deletion.
+  /// and avoid deletion. Set to the current time or less to force deletion. The
+  /// expiration date should be a future date and time.
   DateTime? expiration;
 
   /// The constructor of the APOD item.
@@ -72,7 +73,9 @@ class ApodItem {
     return mediaType == MediaType.video;
   }
 
-  /// Gets the image corresponding to the type of item.
+  /// Gets the image corresponding to the type of item. The HD image URL can
+  /// be selected if [isHd] is set to true. The standard version will be
+  /// returned by default.
   String getImageUrl({bool isHd = false}) {
     if (isVideo() && thumbnailUrl.isNotEmpty) {
       return thumbnailUrl;
@@ -83,7 +86,7 @@ class ApodItem {
     }
   }
 
-  /// Creates an item from the provided map object
+  /// Creates an item from the provided [map] object.
   static ApodItem fromMap(Map<String, dynamic> map) {
     DateTime? expiration = map.containsKey(ApodItemModel.keyExpiration)
         ? DateTime.fromMillisecondsSinceEpoch(map[ApodItemModel.keyExpiration])
@@ -186,7 +189,7 @@ class ApodItem {
         ")";
   }
 
-  /// Comparison operator for the item.
+  /// Comparison operator for the item. Used to perform a deep comparison.
   @override
   bool operator ==(Object other) {
     if (other is! ApodItem) {

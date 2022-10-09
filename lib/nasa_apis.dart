@@ -14,7 +14,10 @@ export 'src/models/apod_item.dart';
 class Nasa {
   /// Initialize the library with the [apiKey] provided by api.nasa.gov and
   /// a function [logReceiver] to receive log events to your personal logging
-  /// tool.
+  /// tool. [isTest] should only be used for internal testing.
+  /// Enable APOD support using [apodSupport] and caching for less API usage
+  /// using [apodCacheSupport], which is enabled by default. Change the default
+  /// caching duration by updating the [apodDefaultCacheExpiration] parameter.
   static Future<void> init(
       {final String? apiKey,
       final Function(String, String)? logReceiver,

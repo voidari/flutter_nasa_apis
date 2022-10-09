@@ -3,8 +3,8 @@ library nasa_apis;
 
 import 'package:nasa_apis/src/models/base_model.dart';
 
-/// The container for APOD data and helper functions for providing the
-/// parsed information.
+/// The SQL model for the ApodItem, used to create and edit the database
+/// and provide non-public constants.
 class ApodItemModel implements BaseModel {
   // Map constants
   static const String keyExpiration = "expiration";
@@ -25,7 +25,8 @@ class ApodItemModel implements BaseModel {
   // Table constants
   static const String tableName = "apod_items";
 
-  /// For internal library use only. Performs a create of the table.
+  /// Performs a create of the table. Once published, this should never
+  /// be changed.
   @override
   String createTable() {
     String command = "CREATE TABLE $tableName(";
@@ -44,7 +45,7 @@ class ApodItemModel implements BaseModel {
     return command;
   }
 
-  /// For internal library use only. Performs an upgrade of the table.
+  /// Performs an upgrade of the table from [oldVersion] to [newVersion].
   @override
   List<String> upgradeTable(int oldVersion, int newVersion) {
     List<String> commands = <String>[];

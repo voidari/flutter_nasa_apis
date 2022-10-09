@@ -32,6 +32,8 @@ class NasaApod {
   static late bool _cacheSupport;
   static late Duration? _defaultCacheExpiration;
 
+  /// Initializes the APOD manager. This is for internal use only. Use the
+  /// NASA initialization function.
   static void init(
       {bool cacheSupport = true,
       Duration? defaultCacheExpiration = const Duration(days: 90)}) {
@@ -98,7 +100,7 @@ class NasaApod {
   /// Requests a random, reasonably sized list of APODs totaling the [count]
   /// provided. The tuple reurned will contain the http response code for
   /// understanding failures, and an APOD item list if the request was
-  /// successful.
+  /// successful. The response for random requests is not cached.
   static Future<Tuple2<int, List<ApodItem>?>> requestByRandom(int count) async {
     Log.out("requestByRandom() Count: $count", name: _cClass);
 
@@ -286,12 +288,13 @@ class NasaApod {
             date.isBefore(maximumApiDate));
   }
 
-  /// Converts a DateTime to the expected NASA request format.
+  /// Converts a [dateTime] to the expected NASA request format.
   static String _toRequestDateFormat(DateTime dateTime) {
     return "${dateTime.year.toString()}-${dateTime.month.toString()}-${dateTime.day.toString()}";
   }
 
-  /// Utility function used to count the number of days between two dates.
+  /// Utility function used to count the number of days between and including
+  /// the [start] and [end] dates.
   static int _daysInRange(DateTime start, DateTime end) {
     start = DateTime(start.year, start.month, start.day);
     end = DateTime(end.year, end.month, end.day);
