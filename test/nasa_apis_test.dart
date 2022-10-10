@@ -12,16 +12,19 @@ String? getApiKey() {
   return null; // Add your API key here
 }
 
-void main() {
+void main() async {
   bool logReceived = false;
-  test('verifies the logging function works', () {
-    const String testMessage = "This is a test log message";
-    Nasa.init(
-        apiKey: getApiKey(),
-        logReceiver: (String msg, String name) {
+  const String testMessage = "This is a test log message";
+  await Nasa.init(
+      apiKey: getApiKey(),
+      apodSupport: true,
+      apodCacheSupport: false,
+      logReceiver: (String msg, String name) {
+        if (msg == testMessage) {
           logReceived = true;
-          expect(msg, testMessage);
-        });
+        }
+      });
+  test('verifies the logging function works', () async {
     Log.out(testMessage);
     expect(logReceived, true);
     Log.setLogFunction((String msg, String name) {});

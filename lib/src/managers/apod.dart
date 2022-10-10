@@ -249,9 +249,12 @@ class NasaApod {
   /// Updates the cache with the provided [apodItem] or [apodItemList].
   /// Use this function to update the list of categories associated with the
   /// item or items. Set the expiration to null to make the item persistent and
-  /// avoid being deleted.
+  /// avoid being deleted. Set [useDefaultCacheExpiration] to true if the
+  /// default expiration should be set.
   static Future<void> updateItemCache(
-      {final ApodItem? apodItem, List<ApodItem>? apodItemList}) async {
+      {ApodItem? apodItem,
+      List<ApodItem>? apodItemList,
+      final bool useDefaultCacheExpiration = false}) async {
     if (!_cacheSupport) {
       Log.out("Caching is not enabled. Enable caching in the init function.",
           name: _cClass);
@@ -265,6 +268,11 @@ class NasaApod {
 
     // Insert or update the items in the database
     for (ApodItem item in apodItemList) {
+      // Update the cache to the default expiration if provided
+      if (useDefaultCacheExpiration && _defaultCacheExpiration != null) {
+        item.expiration = DateTime.now().add(_defaultCacheExpiration!);
+      }
+      // Insert the item into the table.
       await DatabaseManager.getConnection().insert(
         ApodItemModel.tableName,
         item.toMap(),
