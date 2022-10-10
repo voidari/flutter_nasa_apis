@@ -1,3 +1,8 @@
+## 0.0.2
+
+* Add support for setting the default cache expiration in the APOD cache update function.
+* Fix the failing test suite.
+
 ## 0.0.1
 
 * The first beta release of the NASA APIs.
