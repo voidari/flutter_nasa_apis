@@ -4,6 +4,7 @@ library nasa_apis;
 import 'package:nasa_apis/src/log.dart';
 import 'package:nasa_apis/src/managers/apod.dart';
 import 'package:nasa_apis/src/managers/database_manager.dart';
+import 'package:nasa_apis/src/managers/request_manager.dart';
 
 export 'src/managers/apod.dart';
 export 'src/models/apod_item.dart';
@@ -29,6 +30,10 @@ class Nasa {
     if (logReceiver != null) {
       Log.setLogFunction(logReceiver);
     }
+
+    /// Initialize the request manager
+    RequestManager.init(apiKey);
+
     // Initialize the database if anything storage related is supported
     if (apodSupport && apodCacheSupport) {
       await DatabaseManager.init(isTest: isTest);

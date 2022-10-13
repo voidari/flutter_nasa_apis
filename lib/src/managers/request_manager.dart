@@ -21,6 +21,11 @@ class RequestManager {
   static String? _apiKey;
   static bool _apiDemoKeyValid = true;
 
+  /// Initializes the request manager with the API key.
+  static void init(String? apiKey) {
+    _apiKey = apiKey;
+  }
+
   /// Performs a GET request with the provided parameters. [endpoint] is used
   /// to define the exact API path. Populate the [params] for a regular HTTPS
   /// parameter request.
