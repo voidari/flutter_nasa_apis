@@ -1,3 +1,7 @@
+## 0.0.3
+
+* Add missing API key init in the request manager.
+
 ## 0.0.2
 
 * Add support for setting the default cache expiration in the APOD cache update function.
