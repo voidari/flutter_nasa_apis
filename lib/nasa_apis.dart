@@ -5,6 +5,7 @@ import 'package:nasa_apis/src/log.dart';
 import 'package:nasa_apis/src/managers/apod.dart';
 import 'package:nasa_apis/src/managers/database_manager.dart';
 import 'package:nasa_apis/src/managers/request_manager.dart';
+import 'package:timezone/data/latest.dart' as tz;
 
 export 'src/managers/apod.dart';
 export 'src/models/apod_item.dart';
@@ -40,6 +41,7 @@ class Nasa {
     }
     // Initialize the APOD
     if (apodSupport) {
+      tz.initializeTimeZones();
       NasaApod.init(
           cacheSupport: apodCacheSupport,
           defaultCacheExpiration: apodDefaultCacheExpiration);

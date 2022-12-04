@@ -11,6 +11,7 @@ import 'package:nasa_apis/src/managers/database_manager.dart';
 import 'package:nasa_apis/src/managers/request_manager.dart';
 import 'package:nasa_apis/src/models/apod_item.dart';
 import 'package:nasa_apis/src/models/apod_item_model.dart';
+import 'package:nasa_apis/src/util.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:tuple/tuple.dart';
 
@@ -27,7 +28,7 @@ class NasaApod {
   static const String _cParamCount = "count";
   static const String _cParamThumbs = "thumbs";
 
-  static final DateTime _minimumApiDate = DateTime.utc(1995, 6, 16);
+  static final DateTime _minimumApiDate = DateTime(1995, 6, 16);
 
   static late bool _cacheSupport;
   static late Duration? _defaultCacheExpiration;
@@ -81,18 +82,16 @@ class NasaApod {
       int year, int month) async {
     Log.out("requestByMonth() year: $year, month: $month", name: _cClass);
     // Create the start date
-    DateTime startDate = DateTime.utc(year, month, 1);
+    DateTime startDate = DateTime(year, month, 1);
     if (startDate.isBefore(_minimumApiDate)) {
       startDate = _minimumApiDate;
     }
     // Create the end date
-    DateTime endDate =
-        DateTime.utc(year, month, DateTime(year, month + 1, 0).day);
+    DateTime endDate = DateTime(year, month, DateTime(year, month + 1, 0).day);
     // If the current date/time is before the endDate, update the endDate.
     DateTime currentDate = DateTime.now();
     if (currentDate.isBefore(endDate)) {
-      endDate =
-          DateTime.utc(currentDate.year, currentDate.month, currentDate.day);
+      endDate = DateTime(currentDate.year, currentDate.month, currentDate.day);
     }
     return await requestByRange(startDate, endDate);
   }
@@ -130,10 +129,21 @@ class NasaApod {
   /// item list if the request was successful.
   static Future<Tuple2<int, List<ApodItem>?>> requestByRange(
       DateTime startDate, DateTime endDate) async {
-    startDate = DateTime(startDate.year, startDate.month, startDate.day);
-    endDate = DateTime(endDate.year, endDate.month, endDate.day);
+    // Drop the time element
+    startDate = DateTime(startDate.toLocal().year, startDate.toLocal().month,
+        startDate.toLocal().day);
+    endDate = DateTime(
+        endDate.toLocal().year, endDate.toLocal().month, endDate.toLocal().day);
     Log.out("requestByRange() startDate: $startDate, endDate: $endDate",
         name: _cClass);
+    // Check bounds for eastern time
+    DateTime currentEstTime = Util.getEstDateTime(dateOnly: true);
+    if (startDate.isAfter(currentEstTime)) {
+      startDate.subtract(const Duration(days: 1));
+    }
+    if (endDate.isAfter(currentEstTime)) {
+      endDate.subtract(const Duration(days: 1));
+    }
     // Validate the requested dates
     if (!_isValidDate(startDate) ||
         !_isValidDate(endDate) ||
@@ -288,7 +298,7 @@ class NasaApod {
   /// Determines if the date provided is valid. The API only supports dates
   /// at or after the minimum provided date.
   static bool _isValidDate(DateTime date) {
-    DateTime now = DateTime.now();
+    DateTime now = Util.getEstDateTime();
     DateTime maximumApiDate = DateTime(now.year, now.month, now.day);
     return (date.isAtSameMomentAs(_minimumApiDate) ||
             date.isAfter(_minimumApiDate)) &&
