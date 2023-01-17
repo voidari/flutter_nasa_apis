@@ -4,7 +4,7 @@ library nasa_apis;
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
-import 'package:nasa_apis/src/models/apod_item_model.dart';
+import 'package:nasa_apis/src/apod/apod_item_model.dart';
 
 /// The possible media types of an APOD.
 enum MediaType { image, video, unknown }

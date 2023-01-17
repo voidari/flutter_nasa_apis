@@ -2,13 +2,13 @@
 library nasa_apis;
 
 import 'package:nasa_apis/src/log.dart';
-import 'package:nasa_apis/src/managers/apod.dart';
+import 'package:nasa_apis/src/apod/apod.dart';
 import 'package:nasa_apis/src/managers/database_manager.dart';
 import 'package:nasa_apis/src/managers/request_manager.dart';
 import 'package:timezone/data/latest.dart' as tz;
 
-export 'src/managers/apod.dart';
-export 'src/models/apod_item.dart';
+export 'src/apod/apod.dart';
+export 'src/apod/apod_item.dart';
 
 /// The interface used to make NASA API calls for all of their open APIs.
 /// Initialize the instance of the API with your configuration required and

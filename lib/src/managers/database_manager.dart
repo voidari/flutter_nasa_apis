@@ -1,7 +1,7 @@
 // Copyright (C) 2022 by Voidari LLC or its subsidiaries.
 library nasa_apis;
 
-import 'package:nasa_apis/src/models/apod_item_model.dart';
+import 'package:nasa_apis/src/apod/apod_item_model.dart';
 import 'package:nasa_apis/src/models/base_model.dart';
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
