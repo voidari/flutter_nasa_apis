@@ -31,7 +31,7 @@ class RequestManager {
   /// parameter request.
   static Future<http.Response> get(String endpoint,
       {Map<String, String>? params}) async {
-    params = <String, String>{};
+    params ??= <String, String>{};
     http.Response response = http.Response("", HttpStatus.badRequest);
     bool isUseDevKey = false;
 

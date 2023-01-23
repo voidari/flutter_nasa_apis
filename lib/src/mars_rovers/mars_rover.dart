@@ -11,6 +11,7 @@ import 'package:nasa_apis/src/managers/database_manager.dart';
 import 'package:nasa_apis/src/managers/request_manager.dart';
 import 'package:nasa_apis/src/apod/apod_item.dart';
 import 'package:nasa_apis/src/apod/apod_item_model.dart';
+import 'package:nasa_apis/src/mars_rovers/cameras.dart';
 import 'package:nasa_apis/src/mars_rovers/day_info_item.dart';
 import 'package:nasa_apis/src/mars_rovers/day_info_item_model.dart';
 import 'package:nasa_apis/src/mars_rovers/manifest.dart';
@@ -23,17 +24,24 @@ import 'package:tuple/tuple.dart';
 
 /// The manager for Mars Rover requests, providing a framework and caching
 /// options to reduce the API key usage.
-class MarsRover {
+class NasaMarsRover {
   static const String _cClass = "MarsRover";
 
   static const String _cManifestEndpoint = "/mars-photos/api/v1/manifests/%s";
   static const String _cPhotoEndpoint = "/mars-photos/api/v1/rovers/%s/photos";
 
-  static const String roverSojourner = "sojourner";
-  static const String roverSpirit = "spirit";
-  static const String roverOpportunity = "opportunity";
-  static const String roverCuriosity = "curiosity";
-  static const String roverPerseverance = "perseverance";
+  static const String roverSojourner = "Sojourner";
+  static const String roverSpirit = "Spirit";
+  static const String roverOpportunity = "Opportunity";
+  static const String roverCuriosity = "Curiosity";
+  static const String roverPerseverance = "Perseverance";
+
+  static const String _cParamSol = "sol";
+  static const String _cParamEarthDate = "earth_date";
+  static const String _cParamCamera = "camera";
+  static const String _cParamPage = "page";
+
+  static const String _cKeyPhotos = "photos";
 
   static late bool _cacheSupport;
   static late Duration? _defaultCacheExpiration;
@@ -42,7 +50,7 @@ class MarsRover {
   /// NASA initialization function.
   static void init(
       {bool cacheSupport = true,
-      Duration? defaultCacheExpiration = const Duration(days: 90)}) {
+      Duration? defaultCacheExpiration = const Duration(days: 7)}) {
     _cacheSupport = cacheSupport;
     _defaultCacheExpiration = defaultCacheExpiration;
 
@@ -71,23 +79,25 @@ class MarsRover {
       final String rover,
       {bool includePhotoManifest = true}) async {
     // Check the database for existing manifest data
-    List<Map<String, dynamic>> map = await DatabaseManager.getConnection()
-        .query(MarsRoverManifestModel.tableName,
-            where: "${MarsRoverManifestModel.keyName} == '$rover'");
-    if (map.isNotEmpty) {
-      MarsRoverManifest manifest = MarsRoverManifest.fromMap(map[0]);
-      if (includePhotoManifest) {
-        List<MarsRoverDayInfoItem> dayInfoItems = <MarsRoverDayInfoItem>[];
-        map = await DatabaseManager.getConnection().query(
-            MarsRoverDayInfoItemModel.tableName,
-            where: "${MarsRoverPhotoItemModel.keyRover} == '$rover'");
-        for (Map<String, dynamic> mapIter in map) {
-          dayInfoItems.add(MarsRoverDayInfoItem.fromMap(mapIter));
+    if (_cacheSupport) {
+      List<Map<String, dynamic>> map = await DatabaseManager.getConnection()
+          .query(MarsRoverManifestModel.tableName,
+              where: "${MarsRoverManifestModel.keyName} == '$rover'");
+      if (map.isNotEmpty) {
+        MarsRoverManifest manifest = MarsRoverManifest.fromMap(map[0]);
+        if (includePhotoManifest) {
+          List<MarsRoverDayInfoItem> dayInfoItems = <MarsRoverDayInfoItem>[];
+          map = await DatabaseManager.getConnection().query(
+              MarsRoverDayInfoItemModel.tableName,
+              where: "${MarsRoverPhotoItemModel.keyRover} == '$rover'");
+          for (Map<String, dynamic> mapIter in map) {
+            dayInfoItems.add(MarsRoverDayInfoItem.fromMap(mapIter));
+          }
+          manifest.dayInfoItems = dayInfoItems;
         }
-        manifest.dayInfoItems = dayInfoItems;
+        Log.out("requestManifest() A cache hit was found for $rover.");
+        return Tuple2(HttpStatus.ok, manifest);
       }
-      Log.out("requestManifest() A cache hit was found for $rover.");
-      return Tuple2(HttpStatus.ok, manifest);
     }
     // The manifest does not exist in the database. Request the manifest from
     // the NASA servers.
@@ -97,202 +107,137 @@ class MarsRover {
       return Tuple2(response.statusCode, null);
     }
     MarsRoverManifest manifest =
-        MarsRoverManifest.fromMap(json.decode(response.body));
-  }
-
-  /// Performs a request for APOD items given the provided date range between
-  /// and including the [startDate] and [endDate]. The tuple reurned will
-  /// contain the http response code for understanding failures, and an APOD
-  /// item list if the request was successful.
-  static Future<Tuple2<int, List<ApodItem>?>> requestByRange(
-      DateTime startDate, DateTime endDate) async {
-    // Drop the time element
-    startDate = DateTime(startDate.toLocal().year, startDate.toLocal().month,
-        startDate.toLocal().day);
-    endDate = DateTime(
-        endDate.toLocal().year, endDate.toLocal().month, endDate.toLocal().day);
-    Log.out("requestByRange() startDate: $startDate, endDate: $endDate",
-        name: _cClass);
-    // Check bounds for eastern time
-    DateTime currentEstTime = Util.getEstDateTime(dateOnly: true);
-    if (startDate.isAfter(currentEstTime)) {
-      startDate.subtract(const Duration(days: 1));
-    }
-    if (endDate.isAfter(currentEstTime)) {
-      endDate.subtract(const Duration(days: 1));
-    }
-    // Validate the requested dates
-    if (!_isValidDate(startDate) ||
-        !_isValidDate(endDate) ||
-        endDate.isBefore(startDate)) {
-      Log.out("requestByRange() Start date or end date is invalid",
-          name: _cClass);
-      return const Tuple2(600, null);
-    }
-
-    // Check cache for the items if caching is allowed
-    if (_cacheSupport && _defaultCacheExpiration != null) {
-      final List<
-          Map<String,
-              dynamic>> maps = await DatabaseManager.getConnection().query(
-          ApodItemModel.tableName,
-          where:
-              "${startDate.millisecondsSinceEpoch} <= ${ApodItemModel.keyDate} "
-              "AND ${ApodItemModel.keyDate} <= ${endDate.millisecondsSinceEpoch}");
-      if (maps.length == _daysInRange(startDate, endDate)) {
-        Log.out(
-            "requestByRange() A cache hit was found. Converting to return.");
-        List<ApodItem> items = <ApodItem>[];
-        // Add the items to the list and reset the cache
-        DateTime now = DateTime.now();
-        for (Map<String, dynamic> map in maps) {
-          ApodItem item = ApodItem.fromMap(map);
-          item.expiration = now.add(_defaultCacheExpiration!);
-          items.add(item);
-          await DatabaseManager.getConnection().update(
-              ApodItemModel.tableName, item.toMap(),
-              where:
-                  "${ApodItemModel.keyDate} = ${item.date.millisecondsSinceEpoch}"
-                  " AND ${ApodItemModel.keyLocalCategories} = ''",
-              conflictAlgorithm: ConflictAlgorithm.replace);
-        }
-        return Tuple2(HttpStatus.ok, items);
-      }
-    }
-
-    // Create the parameters for the request
-    Map<String, String> params = <String, String>{};
-    if (startDate.isAtSameMomentAs(endDate)) {
-      params.putIfAbsent(_cParamDate, () => _toRequestDateFormat(startDate));
-    } else {
-      params.putIfAbsent(
-          _cParamStartDate, () => _toRequestDateFormat(startDate));
-      params.putIfAbsent(_cParamEndDate, () => _toRequestDateFormat(endDate));
-    }
-    params.putIfAbsent(_cParamThumbs, () => true.toString());
-
-    // Perform the request
-    http.Response response = await RequestManager.get(_cEndpoint, params);
-    List<ApodItem>? items;
-    if (response.statusCode == HttpStatus.ok) {
-      // Parse the response
-      items = <ApodItem>[];
-      dynamic jsonBody = json.decode(response.body);
-      if (startDate.isAtSameMomentAs(endDate)) {
-        items.add(ApodItem.fromMap(jsonBody));
-      } else {
-        for (dynamic jsonItem in jsonBody) {
-          items.add(ApodItem.fromMap(jsonItem));
-        }
-      }
-
-      // Cache the response if caching is support
-      if (_cacheSupport && _defaultCacheExpiration != null) {
-        DateTime expiration = DateTime.now().add(_defaultCacheExpiration!);
-        for (ApodItem item in items) {
-          item.expiration = expiration;
+        MarsRoverManifest.fromUrlMap(json.decode(response.body));
+    // Add to cache
+    if (_cacheSupport) {
+      // Set the expiration and write the manifest to the database
+      manifest.expiration = DateTime.now().add(const Duration(hours: 1));
+      await DatabaseManager.getConnection().insert(
+        MarsRoverManifestModel.tableName,
+        manifest.toMap(),
+        conflictAlgorithm: ConflictAlgorithm.ignore,
+      );
+      if (manifest.dayInfoItems != null) {
+        for (MarsRoverDayInfoItem marsRoverDayInfoItem
+            in manifest.dayInfoItems!) {
           await DatabaseManager.getConnection().insert(
-            ApodItemModel.tableName,
-            item.toMap(),
+            MarsRoverDayInfoItemModel.tableName,
+            marsRoverDayInfoItem.toMap(),
             conflictAlgorithm: ConflictAlgorithm.ignore,
           );
         }
       }
     }
-
-    return Tuple2(response.statusCode, items);
+    // Remove photos if requested
+    if (!includePhotoManifest) {
+      manifest.dayInfoItems = null;
+    }
+    // Return the manifest
+    return Tuple2(HttpStatus.ok, manifest);
   }
 
-  /// Retrieves all APOD items that have the provided [category] or
-  /// [categoryList] associated with them.
-  static Future<List<ApodItem>> getCategory(
-      {final String? category, List<String>? categoryList}) async {
-    // Create the category list where-clause
-    categoryList ??= <String>[];
-    if (category != null && !categoryList.contains(category)) {
-      categoryList.add(category);
-    }
-    String whereClause = "";
-    for (String category in categoryList) {
-      if (whereClause.isNotEmpty) {
-        whereClause += " OR ";
+  /// Requests the photos for the provided [rover] on the selected [martianSol].
+  /// The optional [camera] and [page] can be provided. The tuple returned will
+  /// contain a http response code for understanding failures, and a
+  /// list of MarsRoverPhotoItem items if the request was successful.
+  static Future<Tuple2<int, List<MarsRoverPhotoItem>?>> requestByMartianSol(
+      final String rover, final int martianSol,
+      {MarsRoverCameras? camera, int? page}) async {
+    return _requestPhotos(rover,
+        martianSol: martianSol, camera: camera, page: page);
+  }
+
+  /// Requests the photos for the provided [rover] on the selected [earthDate].
+  /// The optional [camera] and [page] can be provided. The tuple returned will
+  /// contain a http response code for understanding failures, and a
+  /// list of MarsRoverPhotoItem items if the request was successful.
+  static Future<Tuple2<int, List<MarsRoverPhotoItem>?>> requestByEarthDate(
+      final String rover, DateTime earthDate,
+      {MarsRoverCameras? camera, int? page}) async {
+    return _requestPhotos(rover,
+        earthDate: earthDate, camera: camera, page: page);
+  }
+
+  /// Requests the photos for the provided [rover] on the selected [earthDate].
+  /// The optional [camera] and [page] can be provided. The tuple returned will
+  /// contain a http response code for understanding failures, and a
+  /// MarsRoverManifest item if the request was successful.
+  static Future<Tuple2<int, List<MarsRoverPhotoItem>?>> _requestPhotos(
+      final String rover,
+      {DateTime? earthDate,
+      int? martianSol,
+      MarsRoverCameras? camera,
+      int? page}) async {
+    // Check the database for existing data
+    if (_cacheSupport) {
+      String whereClause = "${MarsRoverPhotoItemModel.keyRover} == $rover";
+      if (earthDate != null) {
+        whereClause +=
+            " AND ${MarsRoverPhotoItemModel.keyEarthDate} == ${earthDate.millisecondsSinceEpoch}";
       }
-      whereClause += "${ApodItemModel.keyLocalCategories} LIKE  '%$category%'";
-    }
-
-    // Retrieve the categories from the database
-    final List<Map<String, dynamic>> maps =
-        await DatabaseManager.getConnection()
-            .query(ApodItemModel.tableName, where: whereClause);
-
-    // Populate the APOD items list
-    List<ApodItem> items = <ApodItem>[];
-    for (Map<String, dynamic> map in maps) {
-      items.add(ApodItem.fromMap(map));
-    }
-    return items;
-  }
-
-  /// Updates the cache with the provided [apodItem] or [apodItemList].
-  /// Use this function to update the list of categories associated with the
-  /// item or items. Set the expiration to null to make the item persistent and
-  /// avoid being deleted. Set [useDefaultCacheExpiration] to true if the
-  /// default expiration should be set.
-  static Future<void> updateItemCache(
-      {ApodItem? apodItem,
-      List<ApodItem>? apodItemList,
-      final bool useDefaultCacheExpiration = false}) async {
-    if (!_cacheSupport) {
-      Log.out("Caching is not enabled. Enable caching in the init function.",
-          name: _cClass);
-      return;
-    }
-    // Create the list of APOD items for insertion
-    apodItemList = apodItemList ?? <ApodItem>[];
-    if (apodItem != null && !apodItemList.contains(apodItem)) {
-      apodItemList.add(apodItem);
-    }
-
-    // Insert or update the items in the database
-    for (ApodItem item in apodItemList) {
-      // Update the cache to the default expiration if provided
-      if (useDefaultCacheExpiration && _defaultCacheExpiration != null) {
-        item.expiration = DateTime.now().add(_defaultCacheExpiration!);
+      if (martianSol != null) {
+        whereClause += " AND ${MarsRoverPhotoItemModel.keySol} == $martianSol";
       }
-      // Insert the item into the table.
-      await DatabaseManager.getConnection().insert(
-        ApodItemModel.tableName,
-        item.toMap(),
-        conflictAlgorithm: ConflictAlgorithm.replace,
-      );
+      if (camera != null) {
+        whereClause +=
+            " AND ${MarsRoverPhotoItemModel.keyCamera} == ${camera.name}";
+      }
+      List<Map<String, dynamic>> mapList = await DatabaseManager.getConnection()
+          .query(MarsRoverPhotoItemModel.tableName, where: whereClause);
+      if (mapList.isNotEmpty) {
+        List<MarsRoverPhotoItem> photoItems = <MarsRoverPhotoItem>[];
+        for (Map<String, dynamic> map in mapList) {
+          photoItems.add(MarsRoverPhotoItem.fromMap(map));
+        }
+        Log.out(
+            "requestManifest() A cache hit was found for $earthDate and $camera.");
+        return Tuple2(HttpStatus.ok, photoItems);
+      }
     }
+    // The photos do not exist in the database. Request the photos from
+    // the NASA servers.
+    Map<String, String> params = {};
+    if (earthDate != null) {
+      params[_cParamEarthDate] = Util.toRequestDateFormat(earthDate);
+    }
+    if (martianSol != null) {
+      params[_cParamSol] = martianSol.toString();
+    }
+    if (camera != null) {
+      params[_cParamCamera] = MarsRoverCamerasUtil.toStringKey(camera);
+    }
+    if (page != null) {
+      params[_cParamPage] = page.toString();
+    }
+    http.Response response = await RequestManager.get(
+        _cPhotoEndpoint.replaceFirst("%s", rover),
+        params: params);
+    if (response.statusCode != HttpStatus.ok) {
+      return Tuple2(response.statusCode, null);
+    }
+    // Parse the response
+    List<MarsRoverPhotoItem> photoItems = <MarsRoverPhotoItem>[];
+    Map<String, dynamic> jsonResponse = json.decode(response.body);
+    if (!jsonResponse.containsKey(_cKeyPhotos)) {
+      return Tuple2(response.statusCode, null);
+    }
+    for (Map<String, dynamic> map in jsonResponse[_cKeyPhotos]) {
+      MarsRoverPhotoItem marsRoverPhotoItem =
+          MarsRoverPhotoItem.fromUrlMap(map);
+      marsRoverPhotoItem.expiration =
+          DateTime.now().add(_defaultCacheExpiration!);
+      photoItems.add(marsRoverPhotoItem);
 
-    // Delete expired cache if supported so any changes made in the update
-    // will reflect in the next query.
-    await _deleteExpiredCache();
-  }
-
-  /// Determines if the date provided is valid. The API only supports dates
-  /// at or after the minimum provided date.
-  static bool _isValidDate(DateTime date) {
-    DateTime now = Util.getEstDateTime();
-    DateTime maximumApiDate = DateTime(now.year, now.month, now.day);
-    return (date.isAtSameMomentAs(_minimumApiDate) ||
-            date.isAfter(_minimumApiDate)) &&
-        (date.isAtSameMomentAs(maximumApiDate) ||
-            date.isBefore(maximumApiDate));
-  }
-
-  /// Converts a [dateTime] to the expected NASA request format.
-  static String _toRequestDateFormat(DateTime dateTime) {
-    return "${dateTime.year.toString()}-${dateTime.month.toString()}-${dateTime.day.toString()}";
-  }
-
-  /// Utility function used to count the number of days between and including
-  /// the [start] and [end] dates.
-  static int _daysInRange(DateTime start, DateTime end) {
-    start = DateTime(start.year, start.month, start.day);
-    end = DateTime(end.year, end.month, end.day);
-    return end.difference(start).inHours ~/ 24 + 1;
+      // Insert the response into the database for caching
+      if (_cacheSupport) {
+        await DatabaseManager.getConnection().insert(
+          MarsRoverPhotoItemModel.tableName,
+          marsRoverPhotoItem.toMap(),
+          conflictAlgorithm: ConflictAlgorithm.ignore,
+        );
+      }
+    }
+    // Return the photos list
+    return Tuple2(HttpStatus.ok, photoItems);
   }
 }

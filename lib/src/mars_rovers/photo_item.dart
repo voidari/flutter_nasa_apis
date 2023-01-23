@@ -50,13 +50,8 @@ class MarsRoverPhotoItem {
     final int sol = map[MarsRoverPhotoItemModel.keySol];
     final DateTime earthDate = DateTime.fromMillisecondsSinceEpoch(
         map[MarsRoverPhotoItemModel.keyEarthDate]);
-    MarsRoverCameras camera = MarsRoverCameras.unknown;
-    if (MarsRoverCameras.values
-        .asNameMap()
-        .containsKey(map[MarsRoverPhotoItemModel.keyCamera].toLowerCase())) {
-      camera = MarsRoverCameras.values
-          .byName(map[MarsRoverPhotoItemModel.keyCamera].toLowerCase());
-    }
+    MarsRoverCameras camera = MarsRoverCamerasUtil.fromStringKey(
+        map[MarsRoverPhotoItemModel.keyCamera]);
     final String imageSource = map[MarsRoverPhotoItemModel.keyImageSource];
     DateTime? expiration =
         map.containsKey(MarsRoverPhotoItemModel.keyExpiration)
@@ -71,15 +66,12 @@ class MarsRoverPhotoItem {
   static MarsRoverPhotoItem fromUrlMap(Map<String, dynamic> map) {
     final int id = map[MarsRoverPhotoItemModel.keyId];
     final int sol = map[MarsRoverPhotoItemModel.keySol];
-    final String cameraName = map["camera"]["name"].toLowerCase();
-    MarsRoverCameras camera = MarsRoverCameras.unknown;
-    if (MarsRoverCameras.values.asNameMap().containsKey(cameraName)) {
-      camera = MarsRoverCameras.values.byName(cameraName);
-    }
+    final String cameraName = map["camera"]["name"];
+    MarsRoverCameras camera = MarsRoverCamerasUtil.fromStringKey(cameraName);
     final String imageSource = map[MarsRoverPhotoItemModel.keyImageSource];
     final DateTime earthDate =
         DateTime.parse(map[MarsRoverPhotoItemModel.keyEarthDate]);
-    final String rover = map["rover"]["name"].toLowerCase();
+    final String rover = map["rover"]["name"];
     return MarsRoverPhotoItem(
       id,
       rover,

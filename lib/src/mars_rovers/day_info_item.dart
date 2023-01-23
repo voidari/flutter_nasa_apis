@@ -32,10 +32,9 @@ class MarsRoverDayInfoItem {
     final int totalPhotos = map[MarsRoverDayInfoItemModel.keyTotalPhotos];
     final List<MarsRoverCameras> cameras = [];
     for (String cameraStr in map[MarsRoverDayInfoItemModel.keyCameras]) {
-      if (MarsRoverCameras.values
-          .asNameMap()
-          .containsKey(cameraStr.toLowerCase())) {
-        cameras.add(MarsRoverCameras.values.byName(cameraStr.toLowerCase()));
+      if (MarsRoverCamerasUtil.fromStringKey(cameraStr) !=
+          MarsRoverCameras.unknown) {
+        cameras.add(MarsRoverCamerasUtil.fromStringKey(cameraStr));
       }
     }
     return MarsRoverDayInfoItem(sol, totalPhotos, cameras);
@@ -48,7 +47,7 @@ class MarsRoverDayInfoItem {
     map[MarsRoverDayInfoItemModel.keyTotalPhotos] = totalPhotos;
     List<String> camerasList = [];
     for (MarsRoverCameras camera in cameras) {
-      camerasList.add(camera.name.toUpperCase());
+      camerasList.add(MarsRoverCamerasUtil.toStringKey(camera));
     }
     map[MarsRoverDayInfoItemModel.keyCameras] = camerasList;
     return map;

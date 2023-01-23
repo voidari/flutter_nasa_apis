@@ -5,10 +5,17 @@ import 'package:nasa_apis/src/log.dart';
 import 'package:nasa_apis/src/apod/apod.dart';
 import 'package:nasa_apis/src/managers/database_manager.dart';
 import 'package:nasa_apis/src/managers/request_manager.dart';
+import 'package:nasa_apis/src/mars_rovers/mars_rover.dart';
 import 'package:timezone/data/latest.dart' as tz;
 
 export 'src/apod/apod.dart';
 export 'src/apod/apod_item.dart';
+
+export 'src/mars_rovers/cameras.dart';
+export 'src/mars_rovers/day_info_item.dart';
+export 'src/mars_rovers/manifest.dart';
+export 'src/mars_rovers/mars_rover.dart';
+export 'src/mars_rovers/photo_item.dart';
 
 /// The interface used to make NASA API calls for all of their open APIs.
 /// Initialize the instance of the API with your configuration required and
@@ -26,6 +33,9 @@ class Nasa {
       bool apodSupport = false,
       bool apodCacheSupport = true,
       Duration? apodDefaultCacheExpiration = const Duration(days: 90),
+      bool marsRoverSupport = false,
+      bool marsRoverCacheSupport = true,
+      Duration? marsRoverDefaultCacheExpiration = const Duration(days: 7),
       bool isTest = false}) async {
     // Add the log receiver if provided
     if (logReceiver != null) {
@@ -36,7 +46,8 @@ class Nasa {
     RequestManager.init(apiKey);
 
     // Initialize the database if anything storage related is supported
-    if (apodSupport && apodCacheSupport) {
+    if (apodSupport && apodCacheSupport ||
+        marsRoverSupport && marsRoverCacheSupport) {
       await DatabaseManager.init(isTest: isTest);
     }
     // Initialize the APOD
@@ -45,6 +56,12 @@ class Nasa {
       NasaApod.init(
           cacheSupport: apodCacheSupport,
           defaultCacheExpiration: apodDefaultCacheExpiration);
+    }
+    // Initialize the Mars Rover
+    if (marsRoverSupport) {
+      NasaMarsRover.init(
+          cacheSupport: marsRoverCacheSupport,
+          defaultCacheExpiration: marsRoverDefaultCacheExpiration);
     }
   }
 }

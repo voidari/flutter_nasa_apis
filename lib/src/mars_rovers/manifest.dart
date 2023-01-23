@@ -12,7 +12,8 @@ enum MarsRoverStatus {
   unknown,
 }
 
-/// The container for the rover manifest data, providing the parsed information.
+/// The container for the rover mission manifest data, providing the parsed
+/// information.
 class MarsRoverManifest {
   static const String _keyPhotoManifest = "photo_manifest";
   static const String _keyPhotos = "photos";
@@ -64,27 +65,42 @@ class MarsRoverManifest {
     return status == MarsRoverStatus.active;
   }
 
+  /// Creates an item from the provided URL response [map] object.
+  static MarsRoverManifest fromUrlMap(Map<String, dynamic> map) {
+    map = map[_keyPhotoManifest];
+    MarsRoverManifest manifest = fromMap(map);
+    List<MarsRoverDayInfoItem> dayInfoItems = <MarsRoverDayInfoItem>[];
+    for (Map<String, dynamic> dayInfo in map[_keyPhotos]) {
+      dayInfoItems.add(MarsRoverDayInfoItem.fromMap(dayInfo));
+    }
+    manifest.dayInfoItems = dayInfoItems;
+    return manifest;
+  }
+
   /// Creates an item from the provided [map] object.
   static MarsRoverManifest fromMap(Map<String, dynamic> map) {
     String name = map[MarsRoverManifestModel.keyName];
-    DateTime landingDate = DateTime.fromMillisecondsSinceEpoch(
-        map[MarsRoverManifestModel.keyLandingDate]);
-    DateTime launchDate = DateTime.fromMillisecondsSinceEpoch(
-        map[MarsRoverManifestModel.keyLaunchDate]);
+    DateTime landingDate = map[MarsRoverManifestModel.keyLandingDate] is int
+        ? DateTime.fromMillisecondsSinceEpoch(
+            map[MarsRoverManifestModel.keyLandingDate])
+        : DateTime.parse(map[MarsRoverManifestModel.keyLandingDate]);
+    DateTime launchDate = map[MarsRoverManifestModel.keyLaunchDate] is int
+        ? DateTime.fromMillisecondsSinceEpoch(
+            map[MarsRoverManifestModel.keyLaunchDate])
+        : DateTime.parse(map[MarsRoverManifestModel.keyLaunchDate]);
     MarsRoverStatus status =
         MarsRoverStatus.values.byName(map[MarsRoverManifestModel.keyStatus]);
     int maxSol = map[MarsRoverManifestModel.keyMaxSol];
-    DateTime maxDate = DateTime.fromMillisecondsSinceEpoch(
-        map[MarsRoverManifestModel.keyMaxDate]);
+    DateTime maxDate = map[MarsRoverManifestModel.keyMaxDate] is int
+        ? DateTime.fromMillisecondsSinceEpoch(
+            map[MarsRoverManifestModel.keyMaxDate])
+        : DateTime.parse(map[MarsRoverManifestModel.keyMaxDate]);
+
     int totalPhotos = map[MarsRoverManifestModel.keyTotalPhotos];
     DateTime? expiration = map.containsKey(MarsRoverManifestModel.keyExpiration)
         ? DateTime.fromMillisecondsSinceEpoch(
             map[MarsRoverManifestModel.keyExpiration])
         : null;
-    List<MarsRoverDayInfoItem> dayInfoItems = <MarsRoverDayInfoItem>[];
-    for (Map<String, dynamic> dayInfo in map[_keyPhotos]) {
-      dayInfoItems.add(MarsRoverDayInfoItem.fromMap(dayInfo));
-    }
 
     return MarsRoverManifest(
       name,
@@ -94,7 +110,6 @@ class MarsRoverManifest {
       maxSol,
       maxDate,
       totalPhotos,
-      dayInfoItems: dayInfoItems,
       expiration: expiration,
     );
   }

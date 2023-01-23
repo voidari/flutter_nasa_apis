@@ -187,11 +187,13 @@ class NasaApod {
     // Create the parameters for the request
     Map<String, String> params = <String, String>{};
     if (startDate.isAtSameMomentAs(endDate)) {
-      params.putIfAbsent(_cParamDate, () => _toRequestDateFormat(startDate));
+      params.putIfAbsent(
+          _cParamDate, () => Util.toRequestDateFormat(startDate));
     } else {
       params.putIfAbsent(
-          _cParamStartDate, () => _toRequestDateFormat(startDate));
-      params.putIfAbsent(_cParamEndDate, () => _toRequestDateFormat(endDate));
+          _cParamStartDate, () => Util.toRequestDateFormat(startDate));
+      params.putIfAbsent(
+          _cParamEndDate, () => Util.toRequestDateFormat(endDate));
     }
     params.putIfAbsent(_cParamThumbs, () => true.toString());
 
@@ -306,11 +308,6 @@ class NasaApod {
             date.isAfter(_minimumApiDate)) &&
         (date.isAtSameMomentAs(maximumApiDate) ||
             date.isBefore(maximumApiDate));
-  }
-
-  /// Converts a [dateTime] to the expected NASA request format.
-  static String _toRequestDateFormat(DateTime dateTime) {
-    return "${dateTime.year.toString()}-${dateTime.month.toString()}-${dateTime.day.toString()}";
   }
 
   /// Utility function used to count the number of days between and including

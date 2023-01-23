@@ -1,6 +1,9 @@
 // Copyright (C) 2023 by Voidari LLC or its subsidiaries.
 library nasa_apis;
 
+import 'package:nasa_apis/src/mars_rovers/manifest.dart';
+import 'package:nasa_apis/src/mars_rovers/manifest_model.dart';
+import 'package:nasa_apis/src/mars_rovers/photo_item_model.dart';
 import 'package:nasa_apis/src/models/base_model.dart';
 
 /// The SQL model for the MarsRoverDayInfoItem, used to create and edit the
@@ -23,7 +26,9 @@ class MarsRoverDayInfoItemModel implements BaseModel {
     command += "$keyRover TEXT PRIMARY KEY,";
     command += "$keySol INTEGER,";
     command += "$keyTotalPhotos INTEGER,";
-    command += "$keyCameras TEXT";
+    command += "$keyCameras TEXT,";
+    command +=
+        " FOREIGN KEY ($keyRover) references ${MarsRoverPhotoItemModel.tableName}(${MarsRoverManifestModel.keyName}) ON DELETE CASCADE";
     command += ");";
     return command;
   }
