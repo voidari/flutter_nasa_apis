@@ -3,7 +3,6 @@ library nasa_apis;
 
 import 'dart:convert';
 
-import 'package:flutter/foundation.dart';
 import 'package:nasa_apis/src/mars_rovers/cameras.dart';
 import 'package:nasa_apis/src/mars_rovers/photo_item_model.dart';
 

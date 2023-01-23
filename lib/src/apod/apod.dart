@@ -109,7 +109,8 @@ class NasaApod {
     params.putIfAbsent(_cParamThumbs, () => true.toString());
 
     // Perform the request
-    http.Response response = await RequestManager.get(_cEndpoint, params);
+    http.Response response =
+        await RequestManager.get(_cEndpoint, params: params);
     List<ApodItem>? items;
     if (response.statusCode == HttpStatus.ok) {
       // Parse the response
@@ -195,7 +196,8 @@ class NasaApod {
     params.putIfAbsent(_cParamThumbs, () => true.toString());
 
     // Perform the request
-    http.Response response = await RequestManager.get(_cEndpoint, params);
+    http.Response response =
+        await RequestManager.get(_cEndpoint, params: params);
     List<ApodItem>? items;
     if (response.statusCode == HttpStatus.ok) {
       // Parse the response

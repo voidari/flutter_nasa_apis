@@ -114,7 +114,6 @@ class _MyHomePageState extends State<MyHomePage> {
             TextButton(
               onPressed: () async {
                 _apodTestResults.clear();
-                DateTime date = DateTime.now();
                 Tuple2<int, List<ApodItem>?> result =
                     await NasaApod.requestByRandom(5);
                 _apodTestDescription =

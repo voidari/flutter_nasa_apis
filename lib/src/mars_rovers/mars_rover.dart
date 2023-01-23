@@ -11,38 +11,29 @@ import 'package:nasa_apis/src/managers/database_manager.dart';
 import 'package:nasa_apis/src/managers/request_manager.dart';
 import 'package:nasa_apis/src/apod/apod_item.dart';
 import 'package:nasa_apis/src/apod/apod_item_model.dart';
+import 'package:nasa_apis/src/mars_rovers/day_info_item.dart';
+import 'package:nasa_apis/src/mars_rovers/day_info_item_model.dart';
+import 'package:nasa_apis/src/mars_rovers/manifest.dart';
+import 'package:nasa_apis/src/mars_rovers/manifest_model.dart';
+import 'package:nasa_apis/src/mars_rovers/photo_item.dart';
+import 'package:nasa_apis/src/mars_rovers/photo_item_model.dart';
 import 'package:nasa_apis/src/util.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:tuple/tuple.dart';
-
-/// The container for the rovers, providing information for the API.
-class Rover {
-  String name;
-  DateTime launchDate;
-  DateTime? landDate;
-  DateTime? lastContactDate;
-  Rover(
-    this.name,
-    this.launchDate, {
-    this.landDate,
-    this.lastContactDate,
-  });
-}
 
 /// The manager for Mars Rover requests, providing a framework and caching
 /// options to reduce the API key usage.
 class MarsRover {
   static const String _cClass = "MarsRover";
 
-  static const String _cEndpoint = "/mars-photos/api/v1/rovers/%s/photos";
+  static const String _cManifestEndpoint = "/mars-photos/api/v1/manifests/%s";
+  static const String _cPhotoEndpoint = "/mars-photos/api/v1/rovers/%s/photos";
 
-  static const String _cParamDate = "date";
-  static const String _cParamStartDate = "start_date";
-  static const String _cParamEndDate = "end_date";
-  static const String _cParamCount = "count";
-  static const String _cParamThumbs = "thumbs";
-
-  static final DateTime _minimumApiDate = DateTime(1995, 6, 16);
+  static const String roverSojourner = "sojourner";
+  static const String roverSpirit = "spirit";
+  static const String roverOpportunity = "opportunity";
+  static const String roverCuriosity = "curiosity";
+  static const String roverPerseverance = "perseverance";
 
   static late bool _cacheSupport;
   static late Duration? _defaultCacheExpiration;
@@ -66,69 +57,47 @@ class MarsRover {
   /// The update loop that checks for expired rows. Removes expired entries.
   static Future<void> _deleteExpiredCache() async {
     int now = DateTime.now().millisecondsSinceEpoch;
-    DatabaseManager.getConnection().delete(ApodItemModel.tableName,
-        where: "${ApodItemModel.keyExpiration} < $now AND "
-            "${ApodItemModel.keyExpiration} > 0");
+    for (dynamic model in [MarsRoverManifestModel, MarsRoverPhotoItemModel]) {
+      await DatabaseManager.getConnection().delete(model.tableName,
+          where: "${model.keyExpiration} < $now AND "
+              "${model.keyExpiration} > 0");
+    }
   }
 
-  /// Requests APOD matching the provided [date]. The tuple returned will
-  /// contain a http response code for understanding failures, and an APOD
-  /// item if the request was successful.
-  static Future<Tuple2<int, ApodItem?>> requestByDate(DateTime date) async {
-    Tuple2<int, List<ApodItem>?> results = await requestByRange(date, date);
-    ApodItem? item;
-    if (results.item2 != null && results.item2!.isNotEmpty) {
-      item = results.item2![0];
-    }
-    return Tuple2(results.item1, item);
-  }
-
-  /// Requests the list of APODs for the [year] and [month] provided. The tuple
-  /// returned will contain the http response code for understanding failures,
-  /// and an APOD item list if the request was successful.
-  static Future<Tuple2<int, List<ApodItem>?>> requestByMonth(
-      int year, int month) async {
-    Log.out("requestByMonth() year: $year, month: $month", name: _cClass);
-    // Create the start date
-    DateTime startDate = DateTime(year, month, 1);
-    if (startDate.isBefore(_minimumApiDate)) {
-      startDate = _minimumApiDate;
-    }
-    // Create the end date
-    DateTime endDate = DateTime(year, month, DateTime(year, month + 1, 0).day);
-    // If the current date/time is before the endDate, update the endDate.
-    DateTime currentDate = DateTime.now();
-    if (currentDate.isBefore(endDate)) {
-      endDate = DateTime(currentDate.year, currentDate.month, currentDate.day);
-    }
-    return await requestByRange(startDate, endDate);
-  }
-
-  /// Requests a random, reasonably sized list of APODs totaling the [count]
-  /// provided. The tuple reurned will contain the http response code for
-  /// understanding failures, and an APOD item list if the request was
-  /// successful. The response for random requests is not cached.
-  static Future<Tuple2<int, List<ApodItem>?>> requestByRandom(int count) async {
-    Log.out("requestByRandom() Count: $count", name: _cClass);
-
-    // Add the required parameters
-    Map<String, String> params = <String, String>{};
-    params.putIfAbsent(_cParamCount, () => count.toString());
-    params.putIfAbsent(_cParamThumbs, () => true.toString());
-
-    // Perform the request
-    http.Response response = await RequestManager.get(_cEndpoint, params);
-    List<ApodItem>? items;
-    if (response.statusCode == HttpStatus.ok) {
-      // Parse the response
-      items = <ApodItem>[];
-      dynamic jsonBody = json.decode(response.body);
-      for (dynamic jsonItem in jsonBody) {
-        items.add(ApodItem.fromMap(jsonItem));
+  /// Requests the manifest for the provided [rover]. The tuple returned will
+  /// contain a http response code for understanding failures, and a
+  /// MarsRoverManifest item if the request was successful.
+  static Future<Tuple2<int, MarsRoverManifest?>> requestManifest(
+      final String rover,
+      {bool includePhotoManifest = true}) async {
+    // Check the database for existing manifest data
+    List<Map<String, dynamic>> map = await DatabaseManager.getConnection()
+        .query(MarsRoverManifestModel.tableName,
+            where: "${MarsRoverManifestModel.keyName} == '$rover'");
+    if (map.isNotEmpty) {
+      MarsRoverManifest manifest = MarsRoverManifest.fromMap(map[0]);
+      if (includePhotoManifest) {
+        List<MarsRoverDayInfoItem> dayInfoItems = <MarsRoverDayInfoItem>[];
+        map = await DatabaseManager.getConnection().query(
+            MarsRoverDayInfoItemModel.tableName,
+            where: "${MarsRoverPhotoItemModel.keyRover} == '$rover'");
+        for (Map<String, dynamic> mapIter in map) {
+          dayInfoItems.add(MarsRoverDayInfoItem.fromMap(mapIter));
+        }
+        manifest.dayInfoItems = dayInfoItems;
       }
+      Log.out("requestManifest() A cache hit was found for $rover.");
+      return Tuple2(HttpStatus.ok, manifest);
     }
-
-    return Tuple2(response.statusCode, items);
+    // The manifest does not exist in the database. Request the manifest from
+    // the NASA servers.
+    http.Response response =
+        await RequestManager.get(_cManifestEndpoint.replaceFirst("%s", rover));
+    if (response.statusCode != HttpStatus.ok) {
+      return Tuple2(response.statusCode, null);
+    }
+    MarsRoverManifest manifest =
+        MarsRoverManifest.fromMap(json.decode(response.body));
   }
 
   /// Performs a request for APOD items given the provided date range between

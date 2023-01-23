@@ -2,10 +2,7 @@
 library nasa_apis;
 
 import 'dart:convert';
-import 'dart:math';
 
-import 'package:flutter/foundation.dart';
-import 'package:nasa_apis/src/mars_rovers/cameras.dart';
 import 'package:nasa_apis/src/mars_rovers/day_info_item.dart';
 import 'package:nasa_apis/src/mars_rovers/manifest_model.dart';
 
@@ -17,6 +14,9 @@ enum MarsRoverStatus {
 
 /// The container for the rover manifest data, providing the parsed information.
 class MarsRoverManifest {
+  static const String _keyPhotoManifest = "photo_manifest";
+  static const String _keyPhotos = "photos";
+
   /// The name of the rover.
   final String name;
 
@@ -39,7 +39,7 @@ class MarsRoverManifest {
   final int totalPhotos;
 
   /// The manifest list of photos for all time.
-  final List<MarsRoverDayInfoItem>? photos;
+  List<MarsRoverDayInfoItem>? dayInfoItems;
 
   /// The expiration time of the cache. Set to null to keep the cache persistent
   /// and avoid deletion. Set to the current time or less to force deletion. The
@@ -55,7 +55,7 @@ class MarsRoverManifest {
     this.maxSol,
     this.maxDate,
     this.totalPhotos, {
-    this.photos,
+    this.dayInfoItems,
     this.expiration,
   });
 
@@ -81,6 +81,10 @@ class MarsRoverManifest {
         ? DateTime.fromMillisecondsSinceEpoch(
             map[MarsRoverManifestModel.keyExpiration])
         : null;
+    List<MarsRoverDayInfoItem> dayInfoItems = <MarsRoverDayInfoItem>[];
+    for (Map<String, dynamic> dayInfo in map[_keyPhotos]) {
+      dayInfoItems.add(MarsRoverDayInfoItem.fromMap(dayInfo));
+    }
 
     return MarsRoverManifest(
       name,
@@ -90,6 +94,7 @@ class MarsRoverManifest {
       maxSol,
       maxDate,
       totalPhotos,
+      dayInfoItems: dayInfoItems,
       expiration: expiration,
     );
   }
@@ -106,8 +111,8 @@ class MarsRoverManifest {
     map[MarsRoverManifestModel.keyMaxSol] = maxSol;
     map[MarsRoverManifestModel.keyMaxDate] = maxDate.millisecondsSinceEpoch;
     map[MarsRoverManifestModel.keyTotalPhotos] = totalPhotos;
-    map.putIfAbsent(MarsRoverManifestModel.keyExpiration,
-        () => expiration != null ? expiration?.millisecondsSinceEpoch : 0);
+    map[MarsRoverManifestModel.keyExpiration] =
+        expiration != null ? expiration?.millisecondsSinceEpoch : 0;
     return map;
   }
 
