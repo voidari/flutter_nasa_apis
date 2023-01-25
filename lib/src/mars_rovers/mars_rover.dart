@@ -9,8 +9,6 @@ import 'package:http/http.dart' as http;
 import 'package:nasa_apis/src/log.dart';
 import 'package:nasa_apis/src/managers/database_manager.dart';
 import 'package:nasa_apis/src/managers/request_manager.dart';
-import 'package:nasa_apis/src/apod/apod_item.dart';
-import 'package:nasa_apis/src/apod/apod_item_model.dart';
 import 'package:nasa_apis/src/mars_rovers/cameras.dart';
 import 'package:nasa_apis/src/mars_rovers/day_info_item.dart';
 import 'package:nasa_apis/src/mars_rovers/day_info_item_model.dart';
@@ -25,8 +23,6 @@ import 'package:tuple/tuple.dart';
 /// The manager for Mars Rover requests, providing a framework and caching
 /// options to reduce the API key usage.
 class NasaMarsRover {
-  static const String _cClass = "MarsRover";
-
   static const String _cManifestEndpoint = "/mars-photos/api/v1/manifests/%s";
   static const String _cPhotoEndpoint = "/mars-photos/api/v1/rovers/%s/photos";
 
@@ -45,14 +41,18 @@ class NasaMarsRover {
 
   static late bool _cacheSupport;
   static late Duration? _defaultCacheExpiration;
+  static late Duration? _defaultManifestCacheExpiration;
 
   /// Initializes the APOD manager. This is for internal use only. Use the
   /// NASA initialization function.
-  static void init(
-      {bool cacheSupport = true,
-      Duration? defaultCacheExpiration = const Duration(days: 7)}) {
+  static void init({
+    bool cacheSupport = true,
+    Duration? defaultCacheExpiration = const Duration(days: 7),
+    Duration? defaultManifestCacheExpiration = const Duration(hours: 4),
+  }) {
     _cacheSupport = cacheSupport;
     _defaultCacheExpiration = defaultCacheExpiration;
+    _defaultManifestCacheExpiration = defaultManifestCacheExpiration;
 
     if (_cacheSupport) {
       // Start the loop timer for the specified duration
@@ -65,11 +65,14 @@ class NasaMarsRover {
   /// The update loop that checks for expired rows. Removes expired entries.
   static Future<void> _deleteExpiredCache() async {
     int now = DateTime.now().millisecondsSinceEpoch;
-    for (dynamic model in [MarsRoverManifestModel, MarsRoverPhotoItemModel]) {
-      await DatabaseManager.getConnection().delete(model.tableName,
-          where: "${model.keyExpiration} < $now AND "
-              "${model.keyExpiration} > 0");
-    }
+    await DatabaseManager.getConnection()
+        .delete(MarsRoverManifestModel.tableName,
+            where: "${MarsRoverManifestModel.keyExpiration} < $now AND "
+                "${MarsRoverManifestModel.keyExpiration} > 0");
+    await DatabaseManager.getConnection()
+        .delete(MarsRoverPhotoItemModel.tableName,
+            where: "${MarsRoverPhotoItemModel.keyExpiration} < $now AND "
+                "${MarsRoverPhotoItemModel.keyExpiration} > 0");
   }
 
   /// Requests the manifest for the provided [rover]. The tuple returned will
@@ -89,7 +92,7 @@ class NasaMarsRover {
           List<MarsRoverDayInfoItem> dayInfoItems = <MarsRoverDayInfoItem>[];
           map = await DatabaseManager.getConnection().query(
               MarsRoverDayInfoItemModel.tableName,
-              where: "${MarsRoverPhotoItemModel.keyRover} == '$rover'");
+              where: "${MarsRoverDayInfoItemModel.keyRover} = '$rover'");
           for (Map<String, dynamic> mapIter in map) {
             dayInfoItems.add(MarsRoverDayInfoItem.fromMap(mapIter));
           }
@@ -111,7 +114,8 @@ class NasaMarsRover {
     // Add to cache
     if (_cacheSupport) {
       // Set the expiration and write the manifest to the database
-      manifest.expiration = DateTime.now().add(const Duration(hours: 1));
+      manifest.expiration =
+          DateTime.now().add(_defaultManifestCacheExpiration!);
       await DatabaseManager.getConnection().insert(
         MarsRoverManifestModel.tableName,
         manifest.toMap(),
@@ -122,7 +126,7 @@ class NasaMarsRover {
             in manifest.dayInfoItems!) {
           await DatabaseManager.getConnection().insert(
             MarsRoverDayInfoItemModel.tableName,
-            marsRoverDayInfoItem.toMap(),
+            marsRoverDayInfoItem.toMap(rover: manifest.name),
             conflictAlgorithm: ConflictAlgorithm.ignore,
           );
         }
@@ -170,17 +174,17 @@ class NasaMarsRover {
       int? page}) async {
     // Check the database for existing data
     if (_cacheSupport) {
-      String whereClause = "${MarsRoverPhotoItemModel.keyRover} == $rover";
+      String whereClause = "${MarsRoverPhotoItemModel.keyRover} == '$rover'";
       if (earthDate != null) {
         whereClause +=
-            " AND ${MarsRoverPhotoItemModel.keyEarthDate} == ${earthDate.millisecondsSinceEpoch}";
+            " AND ${MarsRoverPhotoItemModel.keyEarthDate} = ${earthDate.millisecondsSinceEpoch}";
       }
       if (martianSol != null) {
-        whereClause += " AND ${MarsRoverPhotoItemModel.keySol} == $martianSol";
+        whereClause += " AND ${MarsRoverPhotoItemModel.keySol} = $martianSol";
       }
       if (camera != null) {
         whereClause +=
-            " AND ${MarsRoverPhotoItemModel.keyCamera} == ${camera.name}";
+            " AND ${MarsRoverPhotoItemModel.keyCamera} = ${camera.name}";
       }
       List<Map<String, dynamic>> mapList = await DatabaseManager.getConnection()
           .query(MarsRoverPhotoItemModel.tableName, where: whereClause);

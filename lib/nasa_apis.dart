@@ -36,6 +36,8 @@ class Nasa {
       bool marsRoverSupport = false,
       bool marsRoverCacheSupport = true,
       Duration? marsRoverDefaultCacheExpiration = const Duration(days: 7),
+      Duration? marsRoverDefaultManifestCacheExpiration =
+          const Duration(hours: 4),
       bool isTest = false}) async {
     // Add the log receiver if provided
     if (logReceiver != null) {
@@ -61,7 +63,9 @@ class Nasa {
     if (marsRoverSupport) {
       NasaMarsRover.init(
           cacheSupport: marsRoverCacheSupport,
-          defaultCacheExpiration: marsRoverDefaultCacheExpiration);
+          defaultCacheExpiration: marsRoverDefaultCacheExpiration,
+          defaultManifestCacheExpiration:
+              marsRoverDefaultManifestCacheExpiration);
     }
   }
 }

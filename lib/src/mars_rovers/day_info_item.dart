@@ -31,7 +31,11 @@ class MarsRoverDayInfoItem {
     final int sol = map[MarsRoverDayInfoItemModel.keySol];
     final int totalPhotos = map[MarsRoverDayInfoItemModel.keyTotalPhotos];
     final List<MarsRoverCameras> cameras = [];
-    for (String cameraStr in map[MarsRoverDayInfoItemModel.keyCameras]) {
+    List<dynamic> cameraStrList =
+        map[MarsRoverDayInfoItemModel.keyCameras] is String
+            ? map[MarsRoverDayInfoItemModel.keyCameras].split(",")
+            : map[MarsRoverDayInfoItemModel.keyCameras];
+    for (String cameraStr in cameraStrList) {
       if (MarsRoverCamerasUtil.fromStringKey(cameraStr) !=
           MarsRoverCameras.unknown) {
         cameras.add(MarsRoverCamerasUtil.fromStringKey(cameraStr));
@@ -41,15 +45,18 @@ class MarsRoverDayInfoItem {
   }
 
   /// Creates a map given the current item data.
-  Map<String, dynamic> toMap() {
+  Map<String, dynamic> toMap({String? rover}) {
     Map<String, dynamic> map = {};
+    if (rover != null) {
+      map[MarsRoverDayInfoItemModel.keyRover] = rover;
+    }
     map[MarsRoverDayInfoItemModel.keySol] = sol;
     map[MarsRoverDayInfoItemModel.keyTotalPhotos] = totalPhotos;
     List<String> camerasList = [];
     for (MarsRoverCameras camera in cameras) {
       camerasList.add(MarsRoverCamerasUtil.toStringKey(camera));
     }
-    map[MarsRoverDayInfoItemModel.keyCameras] = camerasList;
+    map[MarsRoverDayInfoItemModel.keyCameras] = camerasList.join(",");
     return map;
   }
 

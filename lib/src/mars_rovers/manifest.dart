@@ -9,6 +9,7 @@ import 'package:nasa_apis/src/mars_rovers/manifest_model.dart';
 /// The mission status options.
 enum MarsRoverStatus {
   active,
+  complete,
   unknown,
 }
 
