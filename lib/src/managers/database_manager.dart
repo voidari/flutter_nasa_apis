@@ -39,7 +39,7 @@ class DatabaseManager {
   /// Retrieves the list of all models so they can be created.
   static List<BaseModel> _getModels(int oldVersion, int newVersion) {
     List<BaseModel> modelList = <BaseModel>[];
-    int version = oldVersion != 0 ? oldVersion : 1;
+    int version = oldVersion + 1;
     if (version == 1) {
       modelList.add(ApodItemModel());
       version++;
@@ -55,8 +55,8 @@ class DatabaseManager {
 
   /// Handles the creation of the database and all tables.
   static Future<void> _onCreate(Database db, int newVersion,
-      {int? oldVersion = 0}) async {
-    for (BaseModel model in _getModels(0, newVersion)) {
+      {int oldVersion = 0}) async {
+    for (BaseModel model in _getModels(oldVersion, newVersion)) {
       await db.execute(model.createTable());
     }
   }
