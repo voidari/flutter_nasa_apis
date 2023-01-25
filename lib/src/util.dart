@@ -26,4 +26,9 @@ class Util {
     tz.TZDateTime nowEst = tz.TZDateTime.now(estTimezone);
     return Duration(hours: nowEst.timeZoneOffset.inHours);
   }
+
+  /// Converts a [dateTime] to the expected NASA request format.
+  static String toRequestDateFormat(DateTime dateTime) {
+    return "${dateTime.year.toString()}-${dateTime.month.toString()}-${dateTime.day.toString()}";
+  }
 }

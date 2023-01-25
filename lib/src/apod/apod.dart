@@ -9,8 +9,8 @@ import 'package:http/http.dart' as http;
 import 'package:nasa_apis/src/log.dart';
 import 'package:nasa_apis/src/managers/database_manager.dart';
 import 'package:nasa_apis/src/managers/request_manager.dart';
-import 'package:nasa_apis/src/models/apod_item.dart';
-import 'package:nasa_apis/src/models/apod_item_model.dart';
+import 'package:nasa_apis/src/apod/apod_item.dart';
+import 'package:nasa_apis/src/apod/apod_item_model.dart';
 import 'package:nasa_apis/src/util.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:tuple/tuple.dart';
@@ -109,7 +109,8 @@ class NasaApod {
     params.putIfAbsent(_cParamThumbs, () => true.toString());
 
     // Perform the request
-    http.Response response = await RequestManager.get(_cEndpoint, params);
+    http.Response response =
+        await RequestManager.get(_cEndpoint, params: params);
     List<ApodItem>? items;
     if (response.statusCode == HttpStatus.ok) {
       // Parse the response
@@ -186,16 +187,19 @@ class NasaApod {
     // Create the parameters for the request
     Map<String, String> params = <String, String>{};
     if (startDate.isAtSameMomentAs(endDate)) {
-      params.putIfAbsent(_cParamDate, () => _toRequestDateFormat(startDate));
+      params.putIfAbsent(
+          _cParamDate, () => Util.toRequestDateFormat(startDate));
     } else {
       params.putIfAbsent(
-          _cParamStartDate, () => _toRequestDateFormat(startDate));
-      params.putIfAbsent(_cParamEndDate, () => _toRequestDateFormat(endDate));
+          _cParamStartDate, () => Util.toRequestDateFormat(startDate));
+      params.putIfAbsent(
+          _cParamEndDate, () => Util.toRequestDateFormat(endDate));
     }
     params.putIfAbsent(_cParamThumbs, () => true.toString());
 
     // Perform the request
-    http.Response response = await RequestManager.get(_cEndpoint, params);
+    http.Response response =
+        await RequestManager.get(_cEndpoint, params: params);
     List<ApodItem>? items;
     if (response.statusCode == HttpStatus.ok) {
       // Parse the response
@@ -304,11 +308,6 @@ class NasaApod {
             date.isAfter(_minimumApiDate)) &&
         (date.isAtSameMomentAs(maximumApiDate) ||
             date.isBefore(maximumApiDate));
-  }
-
-  /// Converts a [dateTime] to the expected NASA request format.
-  static String _toRequestDateFormat(DateTime dateTime) {
-    return "${dateTime.year.toString()}-${dateTime.month.toString()}-${dateTime.day.toString()}";
   }
 
   /// Utility function used to count the number of days between and including

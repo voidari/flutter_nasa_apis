@@ -29,8 +29,9 @@ class RequestManager {
   /// Performs a GET request with the provided parameters. [endpoint] is used
   /// to define the exact API path. Populate the [params] for a regular HTTPS
   /// parameter request.
-  static Future<http.Response> get(
-      String endpoint, Map<String, String> params) async {
+  static Future<http.Response> get(String endpoint,
+      {Map<String, String>? params}) async {
+    params ??= <String, String>{};
     http.Response response = http.Response("", HttpStatus.badRequest);
     bool isUseDevKey = false;
 
