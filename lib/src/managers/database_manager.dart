@@ -39,13 +39,16 @@ class DatabaseManager {
   /// Retrieves the list of all models so they can be created.
   static List<BaseModel> _getModels(int oldVersion, int newVersion) {
     List<BaseModel> modelList = <BaseModel>[];
-    if (oldVersion < 1 && 1 <= newVersion) {
+    int version = oldVersion != 0 ? oldVersion : 1;
+    if (version == 1) {
       modelList.add(ApodItemModel());
+      version++;
     }
-    if (oldVersion < 2 && 2 <= newVersion) {
+    if (version == 2) {
       modelList.add(MarsRoverManifestModel());
       modelList.add(MarsRoverDayInfoItemModel());
       modelList.add(MarsRoverPhotoItemModel());
+      version++;
     }
     return modelList;
   }
