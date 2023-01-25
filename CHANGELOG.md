@@ -1,3 +1,7 @@
+## 0.0.5
+
+* Add the mars rover API interface and database caching. Updates the database manager to correctly handle creation and upgrades.
+
 ## 0.0.4
 
 * DateTime values provided need to be converted to the eastern timezone to make sure the date is valid. A date that is 1 day ahead of the eastern timezone will now revert back 1 day so it's the current eastern date.
