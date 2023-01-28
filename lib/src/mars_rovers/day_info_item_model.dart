@@ -9,6 +9,7 @@ import 'package:nasa_apis/src/models/base_model.dart';
 class MarsRoverDayInfoItemModel implements BaseModel {
   // Map constants
   static const String keyRover = "rover";
+  static const String keyEarthDate = "earth_date";
   static const String keySol = "sol";
   static const String keyTotalPhotos = "total_photos";
   static const String keyCameras = "cameras";
@@ -23,6 +24,7 @@ class MarsRoverDayInfoItemModel implements BaseModel {
     String command = "CREATE TABLE $tableName(";
     command += "$keyRover TEXT,";
     command += "$keySol INTEGER,";
+    command += "$keyEarthDate INTEGER,";
     command += "$keyTotalPhotos INTEGER,";
     command += "$keyCameras TEXT,";
     command +=

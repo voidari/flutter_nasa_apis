@@ -40,6 +40,7 @@ class _MyHomePageState extends State<MyHomePage> {
   List<ApodItem> _apodTestResults = <ApodItem>[];
   MarsRoverManifest? _manifest;
   List<MarsRoverPhotoItem>? _marsRoverPhotoItems;
+  DateTime _marsRoverAvailablePhotosDate = DateTime.now();
 
   @override
   void initState() {
@@ -54,13 +55,15 @@ class _MyHomePageState extends State<MyHomePage> {
         // ignore: avoid_print
         print("$name: $msg");
       },
-      apodSupport: true,
-      apodCacheSupport: true,
-      apodDefaultCacheExpiration: const Duration(seconds: 20),
-      marsRoverSupport: true,
-      marsRoverCacheSupport: true,
-      marsRoverDefaultCacheExpiration: const Duration(seconds: 20),
-      marsRoverDefaultManifestCacheExpiration: const Duration(seconds: 20),
+    );
+    await NasaApod.init(
+      cacheSupport: true,
+      cacheExpiration: const Duration(seconds: 20),
+    );
+
+    await NasaMarsRover.init(
+      cacheSupport: true,
+      cacheExpiration: const Duration(minutes: 2),
     );
   }
 
@@ -210,7 +213,6 @@ class _MyHomePageState extends State<MyHomePage> {
             DropdownButton<String>(
               hint: Text(_selectedRover),
               items: <String>[
-                NasaMarsRover.roverSojourner,
                 NasaMarsRover.roverSpirit,
                 NasaMarsRover.roverOpportunity,
                 NasaMarsRover.roverCuriosity,
@@ -258,13 +260,63 @@ class _MyHomePageState extends State<MyHomePage> {
                 _manifest = null;
                 Tuple2<int, List<MarsRoverPhotoItem>?> result =
                     await NasaMarsRover.requestByEarthDate(
-                        _selectedRover, DateTime.now());
+                        [_selectedRover], _marsRoverAvailablePhotosDate);
                 _testDescription =
-                    "requestByEarthDate()\nRover[${_selectedRover.toString()}]\nEarth Date: ${DateTime.now()}\nhttp response code: ${result.item1.toString()}";
+                    "requestByEarthDate()\nRover[${_selectedRover.toString()}]\nEarth Date: $_marsRoverAvailablePhotosDate\nhttp response code: ${result.item1.toString()}";
                 _marsRoverPhotoItems = result.item2;
                 setState(() {});
               },
               child: const Text("requestByEarthDate"),
+            ),
+            TextButton(
+              onPressed: () async {
+                _manifest = null;
+                Tuple2<int, DateTime?> result =
+                    await NasaMarsRover.getPreviousDayWithPhotos(
+                        _marsRoverAvailablePhotosDate,
+                        rovers: [_selectedRover]);
+                if (result.item2 != null) {
+                  _marsRoverAvailablePhotosDate = result.item2!;
+                }
+                _testDescription =
+                    "getPreviousDayWithPhotos()\nRover[${_selectedRover.toString()}]\nNew Date: $_marsRoverAvailablePhotosDate\nhttp response code: ${result.item1.toString()}";
+                setState(() {});
+              },
+              child: const Text("Backward"),
+            ),
+            TextButton(
+              onPressed: () async {
+                _manifest = null;
+                Tuple2<int, DateTime?> result =
+                    await NasaMarsRover.getNextDayWithPhotos(
+                        _marsRoverAvailablePhotosDate,
+                        rovers: [_selectedRover]);
+                if (result.item2 != null) {
+                  _marsRoverAvailablePhotosDate = result.item2!;
+                }
+                _testDescription =
+                    "getNextDayWithPhotos()\nRover[${_selectedRover.toString()}]\nNew Date: $_marsRoverAvailablePhotosDate\nhttp response code: ${result.item1.toString()}";
+                setState(() {});
+              },
+              child: const Text("Forward"),
+            ),
+            TextButton(
+              onPressed: () async {
+                _manifest = null;
+                Tuple2<int, Tuple2<DateTime, DateTime>?> result =
+                    await NasaMarsRover.getValidPhotoRange(
+                        rovers: [_selectedRover]);
+                if (result.item2 != null) {
+                  _testDescription = "getValidPhotoRange()\n";
+                  _testDescription += "Rover[${_selectedRover.toString()}]\n";
+                  _testDescription += "Start Date: ${result.item2!.item1}\n";
+                  _testDescription += "End Date: ${result.item2!.item2}\n";
+                  _testDescription +=
+                      "http response code: ${result.item1.toString()}";
+                }
+                setState(() {});
+              },
+              child: const Text("Photo Date Range"),
             ),
           ],
         ),

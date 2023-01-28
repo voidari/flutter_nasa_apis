@@ -43,11 +43,6 @@ class MarsRoverManifest {
   /// The manifest list of photos for all time.
   List<MarsRoverDayInfoItem>? dayInfoItems;
 
-  /// The expiration time of the cache. Set to null to keep the cache persistent
-  /// and avoid deletion. Set to the current time or less to force deletion. The
-  /// expiration date should be a future date and time.
-  DateTime? expiration;
-
   /// The constructor of the MarsRoverManifest item.
   MarsRoverManifest(
     this.name,
@@ -58,7 +53,6 @@ class MarsRoverManifest {
     this.maxDate,
     this.totalPhotos, {
     this.dayInfoItems,
-    this.expiration,
   });
 
   /// Determines if the mission status is ongoing.
@@ -72,7 +66,7 @@ class MarsRoverManifest {
     MarsRoverManifest manifest = fromMap(map);
     List<MarsRoverDayInfoItem> dayInfoItems = <MarsRoverDayInfoItem>[];
     for (Map<String, dynamic> dayInfo in map[_keyPhotos]) {
-      dayInfoItems.add(MarsRoverDayInfoItem.fromMap(dayInfo));
+      dayInfoItems.add(MarsRoverDayInfoItem.fromUrlMap(dayInfo, manifest.name));
     }
     manifest.dayInfoItems = dayInfoItems;
     return manifest;
@@ -98,10 +92,6 @@ class MarsRoverManifest {
         : DateTime.parse(map[MarsRoverManifestModel.keyMaxDate]);
 
     int totalPhotos = map[MarsRoverManifestModel.keyTotalPhotos];
-    DateTime? expiration = map.containsKey(MarsRoverManifestModel.keyExpiration)
-        ? DateTime.fromMillisecondsSinceEpoch(
-            map[MarsRoverManifestModel.keyExpiration])
-        : null;
 
     return MarsRoverManifest(
       name,
@@ -111,7 +101,6 @@ class MarsRoverManifest {
       maxSol,
       maxDate,
       totalPhotos,
-      expiration: expiration,
     );
   }
 
@@ -127,8 +116,6 @@ class MarsRoverManifest {
     map[MarsRoverManifestModel.keyMaxSol] = maxSol;
     map[MarsRoverManifestModel.keyMaxDate] = maxDate.millisecondsSinceEpoch;
     map[MarsRoverManifestModel.keyTotalPhotos] = totalPhotos;
-    map[MarsRoverManifestModel.keyExpiration] =
-        expiration != null ? expiration?.millisecondsSinceEpoch : 0;
     return map;
   }
 

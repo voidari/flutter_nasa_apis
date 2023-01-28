@@ -17,15 +17,13 @@ void main() async {
   const String testMessage = "This is a test log message";
   await Nasa.init(
       apiKey: getApiKey(),
-      apodSupport: true,
-      apodCacheSupport: false,
-      marsRoverSupport: true,
-      marsRoverCacheSupport: false,
       logReceiver: (String msg, String name) {
         if (msg == testMessage) {
           logReceived = true;
         }
       });
+  await NasaApod.init(cacheSupport: false);
+  await NasaMarsRover.init(cacheSupport: false);
   test('verifies the logging function works', () async {
     Log.out(testMessage);
     expect(logReceived, true);
@@ -61,7 +59,7 @@ void main() async {
     // Request photos for the earth date
     Tuple2<int, List<MarsRoverPhotoItem>?> earthDayInfoItemsPair =
         await NasaMarsRover.requestByEarthDate(
-            NasaMarsRover.roverPerseverance, DateTime(2023, 1, 15));
+            [NasaMarsRover.roverPerseverance], DateTime(2023, 1, 15));
     expect(earthDayInfoItemsPair.item1, HttpStatus.ok);
     expect(earthDayInfoItemsPair.item2, isNot(null));
     expect(earthDayInfoItemsPair.item2![0].id, 1085674);

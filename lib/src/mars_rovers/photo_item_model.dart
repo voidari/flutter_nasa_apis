@@ -23,10 +23,10 @@ class MarsRoverPhotoItemModel implements BaseModel {
   @override
   String createTable() {
     String command = "CREATE TABLE $tableName(";
-    command += "$keyId TEXT PRIMARY KEY,";
+    command += "$keyId INTEGER PRIMARY KEY,";
     command += "$keyRover TEXT,";
     command += "$keySol INTEGER,";
-    command += "$keyEarthDate INT,";
+    command += "$keyEarthDate INTEGER,";
     command += "$keyCamera TEXT,";
     command += "$keyImageSource TEXT,";
     command += "$keyExpiration INTEGER";

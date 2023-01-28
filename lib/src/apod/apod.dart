@@ -13,6 +13,7 @@ import 'package:nasa_apis/src/apod/apod_item.dart';
 import 'package:nasa_apis/src/apod/apod_item_model.dart';
 import 'package:nasa_apis/src/util.dart';
 import 'package:sqflite/sqflite.dart';
+import 'package:timezone/data/latest.dart' as tz;
 import 'package:tuple/tuple.dart';
 
 /// The manager for APOD requests, providing a framework and caching options
@@ -31,15 +32,15 @@ class NasaApod {
   static final DateTime _minimumApiDate = DateTime(1995, 6, 16);
 
   static late bool _cacheSupport;
-  static late Duration? _defaultCacheExpiration;
+  static late Duration? _cacheExpiration;
 
-  /// Initializes the APOD manager. This is for internal use only. Use the
-  /// NASA initialization function.
-  static void init(
+  /// Initializes the APOD manager.
+  static Future<void> init(
       {bool cacheSupport = true,
-      Duration? defaultCacheExpiration = const Duration(days: 90)}) {
+      Duration? cacheExpiration = const Duration(days: 90)}) async {
+    tz.initializeTimeZones();
     _cacheSupport = cacheSupport;
-    _defaultCacheExpiration = defaultCacheExpiration;
+    _cacheExpiration = cacheExpiration;
 
     if (_cacheSupport) {
       // Start the loop timer for the specified duration
@@ -155,7 +156,7 @@ class NasaApod {
     }
 
     // Check cache for the items if caching is allowed
-    if (_cacheSupport && _defaultCacheExpiration != null) {
+    if (_cacheSupport && _cacheExpiration != null) {
       final List<
           Map<String,
               dynamic>> maps = await DatabaseManager.getConnection().query(
@@ -171,7 +172,7 @@ class NasaApod {
         DateTime now = DateTime.now();
         for (Map<String, dynamic> map in maps) {
           ApodItem item = ApodItem.fromMap(map);
-          item.expiration = now.add(_defaultCacheExpiration!);
+          item.expiration = now.add(_cacheExpiration!);
           items.add(item);
           await DatabaseManager.getConnection().update(
               ApodItemModel.tableName, item.toMap(),
@@ -214,8 +215,8 @@ class NasaApod {
       }
 
       // Cache the response if caching is support
-      if (_cacheSupport && _defaultCacheExpiration != null) {
-        DateTime expiration = DateTime.now().add(_defaultCacheExpiration!);
+      if (_cacheSupport && _cacheExpiration != null) {
+        DateTime expiration = DateTime.now().add(_cacheExpiration!);
         for (ApodItem item in items) {
           item.expiration = expiration;
           await DatabaseManager.getConnection().insert(
@@ -283,8 +284,8 @@ class NasaApod {
     // Insert or update the items in the database
     for (ApodItem item in apodItemList) {
       // Update the cache to the default expiration if provided
-      if (useDefaultCacheExpiration && _defaultCacheExpiration != null) {
-        item.expiration = DateTime.now().add(_defaultCacheExpiration!);
+      if (useDefaultCacheExpiration && _cacheExpiration != null) {
+        item.expiration = DateTime.now().add(_cacheExpiration!);
       }
       // Insert the item into the table.
       await DatabaseManager.getConnection().insert(

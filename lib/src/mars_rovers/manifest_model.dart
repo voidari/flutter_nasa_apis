@@ -14,7 +14,6 @@ class MarsRoverManifestModel implements BaseModel {
   static const String keyMaxSol = "max_sol";
   static const String keyMaxDate = "max_date";
   static const String keyTotalPhotos = "total_photos";
-  static const String keyExpiration = "expiration";
 
   // Table constants
   static const String tableName = "mars_rover_manifests";
@@ -30,8 +29,7 @@ class MarsRoverManifestModel implements BaseModel {
     command += "$keyStatus TEXT,";
     command += "$keyMaxSol INTEGER,";
     command += "$keyMaxDate INTEGER,";
-    command += "$keyTotalPhotos INTEGER,";
-    command += "$keyExpiration INTEGER";
+    command += "$keyTotalPhotos INTEGER";
     command += ");";
     return command;
   }
