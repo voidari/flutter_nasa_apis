@@ -1,3 +1,9 @@
+## 0.0.6
+
+* Add function to get previous and next day with photos given a list of rovers.
+* Add function to get the range of days the rover list has photos available.
+* Improve the caching to account for some missed edge cases.
+
 ## 0.0.5
 
 * Add the mars rover API interface and database caching. Updates the database manager to correctly handle creation and upgrades.

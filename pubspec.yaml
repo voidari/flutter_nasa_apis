@@ -1,6 +1,6 @@
 name: nasa_apis
 description: A wrapper for the NASA Open APIs with caching and helpful utilities for seamless integration.
-version: 0.0.5
+version: 0.0.6
 repository: https://github.com/voidari/flutter_nasa_apis
 issue_tracker: https://github.com/voidari/flutter_nasa_apis/issues
 
