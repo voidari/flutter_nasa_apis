@@ -66,7 +66,7 @@ class MarsRoverPhotoItem {
   static MarsRoverPhotoItem fromUrlMap(Map<String, dynamic> map) {
     final int id = map[MarsRoverPhotoItemModel.keyId];
     final int sol = map[MarsRoverPhotoItemModel.keySol];
-    final String cameraName = map["camera"]["name"];
+    final String cameraName = map["camera"]["name"].toUpperCase();
     MarsRoverCameras camera = MarsRoverCamerasUtil.fromStringKey(cameraName);
     final String imageSource = map[MarsRoverPhotoItemModel.keyImageSource];
     final DateTime earthDate =
@@ -90,7 +90,8 @@ class MarsRoverPhotoItem {
     map[MarsRoverPhotoItemModel.keySol] = sol;
     map[MarsRoverPhotoItemModel.keyEarthDate] =
         earthDate.millisecondsSinceEpoch;
-    map[MarsRoverPhotoItemModel.keyCamera] = camera.name;
+    map[MarsRoverPhotoItemModel.keyCamera] =
+        MarsRoverCamerasUtil.toStringKey(camera);
     map[MarsRoverPhotoItemModel.keyImageSource] = imageSource;
     map[MarsRoverPhotoItemModel.keyExpiration] =
         expiration != null ? expiration?.millisecondsSinceEpoch : 0;

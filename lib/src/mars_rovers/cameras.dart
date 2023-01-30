@@ -15,6 +15,12 @@ enum MarsRoverCameras {
   /// Rear Hazard Avoidance Camera
   rhaz,
 
+  /// Rear Hazard Avoidance Camera - Left
+  rhazLeft,
+
+  /// Rear Hazard Avoidance Camera - Right
+  rhazRight,
+
   /// Mast Camera
   mast,
 
@@ -67,6 +73,8 @@ class MarsRoverCamerasUtil {
   static const String _keyFhazLeft = "FRONT_HAZCAM_LEFT_A";
   static const String _keyFhazRight = "FRONT_HAZCAM_RIGHT_A";
   static const String _keyRhaz = "RHAZ";
+  static const String _keyRhazLeft = "REAR_HAZCAM_LEFT";
+  static const String _keyRhazRight = "REAR_HAZCAM_RIGHT";
   static const String _keyMast = "MAST";
   static const String _keyMczLeft = "MCZ_LEFT";
   static const String _keyMczRight = "MCZ_RIGHT";
@@ -94,6 +102,10 @@ class MarsRoverCamerasUtil {
         return MarsRoverCameras.fhazRight;
       case _keyRhaz:
         return MarsRoverCameras.rhaz;
+      case _keyRhazLeft:
+        return MarsRoverCameras.rhazLeft;
+      case _keyRhazRight:
+        return MarsRoverCameras.rhazRight;
       case _keyMast:
         return MarsRoverCameras.mast;
       case _keyMczLeft:
@@ -138,6 +150,10 @@ class MarsRoverCamerasUtil {
         return _keyFhazRight;
       case MarsRoverCameras.rhaz:
         return _keyRhaz;
+      case MarsRoverCameras.rhazLeft:
+        return _keyRhazLeft;
+      case MarsRoverCameras.rhazRight:
+        return _keyRhazRight;
       case MarsRoverCameras.mast:
         return _keyMast;
       case MarsRoverCameras.mczLeft:

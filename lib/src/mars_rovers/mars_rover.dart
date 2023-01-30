@@ -250,7 +250,8 @@ class NasaMarsRover {
                 "MIN(${MarsRoverDayInfoItemModel.keyEarthDate}) as ${MarsRoverDayInfoItemModel.keyEarthDate}"
               ],
               where: whereClause);
-      if (result.isNotEmpty) {
+      if (result.isNotEmpty &&
+          result[0][MarsRoverDayInfoItemModel.keyEarthDate] is int) {
         minDate = DateTime.fromMillisecondsSinceEpoch(
             result[0][MarsRoverDayInfoItemModel.keyEarthDate]);
       }
@@ -261,7 +262,8 @@ class NasaMarsRover {
                 "MAX(${MarsRoverDayInfoItemModel.keyEarthDate}) as ${MarsRoverDayInfoItemModel.keyEarthDate}"
               ],
               where: whereClause);
-      if (result.isNotEmpty) {
+      if (result.isNotEmpty &&
+          result[0][MarsRoverDayInfoItemModel.keyEarthDate] is int) {
         maxDate = DateTime.fromMillisecondsSinceEpoch(
             result[0][MarsRoverDayInfoItemModel.keyEarthDate]);
       }
@@ -367,32 +369,32 @@ class NasaMarsRover {
     // Query the items in the photos table into a count
     Map<String, int> cachedRoverCount = <String, int>{};
     const String countKey = "count";
-    List<Map<String, dynamic>> photoItemList =
-        await DatabaseManager.getConnection().query(
-      MarsRoverPhotoItemModel.tableName,
-      columns: [
-        MarsRoverPhotoItemModel.keyRover,
-        "COUNT(${MarsRoverPhotoItemModel.keyRover}) as $countKey"
-      ],
-      where:
-          "${MarsRoverPhotoItemModel.keyEarthDate} = ${earthDate.millisecondsSinceEpoch}",
-    );
+    List<
+        Map<String,
+            dynamic>> photoItemList = await DatabaseManager.getConnection().query(
+        MarsRoverPhotoItemModel.tableName,
+        columns: [
+          MarsRoverPhotoItemModel.keyRover,
+          "COUNT(${MarsRoverPhotoItemModel.keyRover}) as $countKey"
+        ],
+        where:
+            "${MarsRoverPhotoItemModel.keyEarthDate} = ${earthDate.millisecondsSinceEpoch}",
+        groupBy: MarsRoverPhotoItemModel.keyRover);
     for (Map<String, dynamic> photoItemMap in photoItemList) {
-      if (photoItemMap[MarsRoverPhotoItemModel.keyRover] == null) {
-        return false;
+      if (photoItemMap[MarsRoverPhotoItemModel.keyRover] != null) {
+        cachedRoverCount[photoItemMap[MarsRoverPhotoItemModel.keyRover]] =
+            photoItemMap[countKey];
+      } else {
+        cachedRoverCount[photoItemMap[MarsRoverPhotoItemModel.keyRover]] = 0;
       }
-      cachedRoverCount[photoItemMap[MarsRoverPhotoItemModel.keyRover]] =
-          photoItemMap[countKey];
     }
 
     // Iterate over the day info items and compare them to the count
     for (MarsRoverDayInfoItem dayInfoItem in dayInfoList.item2!) {
       if (!cachedRoverCount.containsKey(dayInfoItem.rover) ||
-          cachedRoverCount[dayInfoItem.rover] == dayInfoItem.totalPhotos) {
-        return HttpStatus.ok ==
-            (await _requestPhotos(rovers,
-                    earthDate: earthDate, skipCacheCheck: true))
-                .item1;
+          cachedRoverCount[dayInfoItem.rover] != dayInfoItem.totalPhotos) {
+        await _requestPhotos([dayInfoItem.rover],
+            earthDate: earthDate, skipCacheCheck: true);
       }
     }
     return true;
@@ -439,7 +441,22 @@ class NasaMarsRover {
         if (cameras != null && cameras.isNotEmpty) {
           whereClause += " AND (";
           for (MarsRoverCameras camera in cameras) {
-            "${MarsRoverPhotoItemModel.keyCamera} = ${MarsRoverCamerasUtil.toStringKey(camera)} OR ";
+            if (camera != MarsRoverCameras.unknown) {
+              whereClause +=
+                  "${MarsRoverPhotoItemModel.keyCamera} = '${MarsRoverCamerasUtil.toStringKey(camera)}' OR ";
+            } else {
+              String cameraGroup = "(";
+              for (MarsRoverCameras groupCamera in MarsRoverCameras.values) {
+                if (groupCamera != MarsRoverCameras.unknown) {
+                  cameraGroup +=
+                      "'${MarsRoverCamerasUtil.toStringKey(groupCamera)}', ";
+                }
+              }
+              cameraGroup = cameraGroup.substring(0, cameraGroup.length - 2);
+              cameraGroup += ")";
+              whereClause +=
+                  "${MarsRoverPhotoItemModel.keyCamera} NOT IN $cameraGroup OR ";
+            }
           }
           whereClause = whereClause.substring(0, whereClause.length - 4);
           whereClause += ")";
