@@ -88,10 +88,7 @@ class NasaMarsRover {
     rovers.add(roverPerseverance);
     // Loop through the rovers and sync each manifest
     for (String rover in rovers) {
-      Tuple2<int, MarsRoverManifest?> result =
-          await requestManifest(rover, includePhotoManifest: false);
-      Log.out(
-          "Manifest sync for $rover resulted in response code ${result.item1} and ${result.item2 != null ? result.item2!.totalPhotos.toString() : "null"} photos");
+      requestManifest(rover, includePhotoManifest: false);
     }
     await _lastManifestSync.set(DateTime.now().millisecondsSinceEpoch);
   }
