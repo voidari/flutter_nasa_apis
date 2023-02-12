@@ -43,21 +43,23 @@ class NasaMarsRover {
   static late Duration? _cacheExpiration;
 
   static late PersistNotifier _lastManifestSync;
+  static const Duration _syncInterval = Duration(hours: 4);
 
   /// Initializes the Mars Rover manager.
-  static Future<void> init({
-    bool cacheSupport = true,
-    Duration? cacheExpiration = const Duration(days: 7),
-  }) async {
+  static Future<void> init(
+      {bool cacheSupport = true,
+      Duration? cacheExpiration = const Duration(days: 7),
+      bool synchronous = false}) async {
     _cacheSupport = cacheSupport;
     _cacheExpiration = cacheExpiration;
     _lastManifestSync = await PersistNotifier.create(
         "com.voidari.nasa_mars_rover.lastManifestSync", 0);
 
     if (_cacheSupport) {
-      _syncManifests();
+      synchronous ? await _syncManifests() : _syncManifests();
+      synchronous ? await _deleteExpiredCache() : _deleteExpiredCache();
       // Start the loop timer for the specified duration
-      Timer.periodic(const Duration(minutes: 1), (timer) {
+      Timer.periodic(const Duration(minutes: 5), (timer) {
         _syncManifests();
         _deleteExpiredCache();
       });
@@ -70,8 +72,9 @@ class NasaMarsRover {
     // Check if we're ready to sync
     DateTime lastSync =
         DateTime.fromMillisecondsSinceEpoch(_lastManifestSync.value);
-    if (!_cacheSupport || DateTime.now().difference(lastSync).inHours < 4) {
-      return;
+    if (!_cacheSupport ||
+        DateTime.now().difference(lastSync).inHours < _syncInterval.inHours) {
+      // return;
     }
     Set<String> rovers = {};
     // Query the database for all manifest rover names.
@@ -88,9 +91,20 @@ class NasaMarsRover {
     rovers.add(roverPerseverance);
     // Loop through the rovers and sync each manifest
     for (String rover in rovers) {
-      requestManifest(rover, includePhotoManifest: false);
+      Tuple2<int, MarsRoverManifest?> manifestResult =
+          await requestManifest(rover, includePhotoManifest: false);
+      if (manifestResult.item1 != HttpStatus.ok) {
+        Log.out("Unable to sync manifests.", name: "syncManifests");
+        return;
+      }
     }
     await _lastManifestSync.set(DateTime.now().millisecondsSinceEpoch);
+  }
+
+  /// Determines the next sync interval.
+  static DateTime getNextSyncTime() {
+    return DateTime.fromMillisecondsSinceEpoch(_lastManifestSync.value)
+        .add(_syncInterval);
   }
 
   /// The update loop that checks for expired rows. Removes expired entries.
@@ -111,7 +125,8 @@ class NasaMarsRover {
     // Check the database for existing manifest data if a sync is not required
     DateTime lastSync =
         DateTime.fromMillisecondsSinceEpoch(_lastManifestSync.value);
-    if (_cacheSupport && DateTime.now().difference(lastSync).inHours < 4) {
+    if (_cacheSupport &&
+        DateTime.now().difference(lastSync).inHours < _syncInterval.inHours) {
       List<Map<String, dynamic>> map = await DatabaseManager.getConnection()
           .query(MarsRoverManifestModel.tableName,
               where: "${MarsRoverManifestModel.keyName} == '$rover'");
