@@ -138,7 +138,7 @@ class NasaMarsRover {
               MarsRoverDayInfoItemModel.tableName,
               where: "${MarsRoverDayInfoItemModel.keyRover} = '$rover'");
           for (Map<String, dynamic> mapIter in map) {
-            dayInfoItems.add(MarsRoverDayInfoItem.fromUrlMap(mapIter, rover));
+            dayInfoItems.add(MarsRoverDayInfoItem.fromMap(mapIter));
           }
           manifest.dayInfoItems = dayInfoItems;
         }

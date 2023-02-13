@@ -37,6 +37,8 @@ class MarsRoverDayInfoItem {
   /// Creates an item from the provided [map] object.
   static MarsRoverDayInfoItem fromUrlMap(
       Map<String, dynamic> map, String rover) {
+    print(map);
+    print(rover);
     map[MarsRoverDayInfoItemModel.keyRover] = rover;
     return fromMap(map);
   }
