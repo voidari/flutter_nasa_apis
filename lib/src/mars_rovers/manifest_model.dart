@@ -22,7 +22,7 @@ class MarsRoverManifestModel implements BaseModel {
   /// be changed.
   @override
   String createTable() {
-    String command = "CREATE TABLE $tableName(";
+    String command = "CREATE TABLE IF NOT EXISTS $tableName(";
     command += "$keyName TEXT PRIMARY KEY,";
     command += "$keyLandingDate INTEGER,";
     command += "$keyLaunchDate INTEGER,";

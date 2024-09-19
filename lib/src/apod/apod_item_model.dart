@@ -29,7 +29,7 @@ class ApodItemModel implements BaseModel {
   /// be changed.
   @override
   String createTable() {
-    String command = "CREATE TABLE $tableName(";
+    String command = "CREATE TABLE IF NOT EXISTS $tableName(";
     command += "$keyDate INTEGER PRIMARY KEY,";
     command += "$keyExpiration INTEGER,";
     command += "$keyLocalCategories TEXT,";

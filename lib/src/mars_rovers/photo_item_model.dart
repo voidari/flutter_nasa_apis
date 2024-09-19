@@ -22,7 +22,7 @@ class MarsRoverPhotoItemModel implements BaseModel {
   /// be changed.
   @override
   String createTable() {
-    String command = "CREATE TABLE $tableName(";
+    String command = "CREATE TABLE IF NOT EXISTS $tableName(";
     command += "$keyId INTEGER PRIMARY KEY,";
     command += "$keyRover TEXT,";
     command += "$keySol INTEGER,";
